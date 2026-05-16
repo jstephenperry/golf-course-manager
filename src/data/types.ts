@@ -137,7 +137,7 @@ export type PaymentMethod = "Cash" | "Card" | "Member Charge" | "Comp";
 
 export interface TabLineItem {
   id: string;
-  productId?: string;
+  productId: string;
   name: string;
   unitPrice: number;
   quantity: number;

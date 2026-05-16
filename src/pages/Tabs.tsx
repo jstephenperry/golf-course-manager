@@ -92,8 +92,7 @@ export function Tabs() {
     );
   };
 
-  const adjustStock = (productId: string | undefined, delta: number) => {
-    if (!productId) return;
+  const adjustStock = (productId: string, delta: number) => {
     update("products", (products) =>
       products.map((p) =>
         p.id === productId
@@ -105,44 +104,29 @@ export function Tabs() {
 
   const addItem = (
     tab: PlayerTab,
-    product: Product | null,
-    custom?: { name: string; price: number },
+    product: Product,
     qty = 1,
     notes = "",
   ) => {
-    let lineItem: TabLineItem;
-    if (product) {
-      if (product.stock < qty) {
-        if (
-          !window.confirm(
-            `Only ${product.stock} of ${product.name} in stock. Add anyway?`,
-          )
-        ) {
-          return;
-        }
+    if (product.stock < qty) {
+      if (
+        !window.confirm(
+          `Only ${product.stock} of ${product.name} in stock. Add anyway?`,
+        )
+      ) {
+        return;
       }
-      lineItem = {
-        id: uid("li"),
-        productId: product.id,
-        name: product.name,
-        unitPrice: product.price,
-        quantity: qty,
-        notes,
-        addedAt: new Date().toISOString(),
-      };
-      adjustStock(product.id, -qty);
-    } else if (custom) {
-      lineItem = {
-        id: uid("li"),
-        name: custom.name,
-        unitPrice: custom.price,
-        quantity: qty,
-        notes,
-        addedAt: new Date().toISOString(),
-      };
-    } else {
-      return;
     }
+    const lineItem: TabLineItem = {
+      id: uid("li"),
+      productId: product.id,
+      name: product.name,
+      unitPrice: product.price,
+      quantity: qty,
+      notes,
+      addedAt: new Date().toISOString(),
+    };
+    adjustStock(product.id, -qty);
     updateTab(tab.id, { items: [...tab.items, lineItem] });
   };
 
@@ -359,8 +343,8 @@ export function Tabs() {
           memberName={memberName}
           allMembers={data.members}
           allProducts={data.products}
-          addItem={(product, custom, qty, notes) =>
-            addItem(activeTab, product, custom, qty, notes)
+          addItem={(product, qty, notes) =>
+            addItem(activeTab, product, qty, notes)
           }
           removeItem={(item) => removeItem(activeTab, item)}
           changeItemQty={(item, delta) => changeItemQty(activeTab, item, delta)}
@@ -507,12 +491,7 @@ interface TabDetailProps {
   memberName: (id: string) => string;
   allMembers: ReturnType<typeof useStore>["data"]["members"];
   allProducts: Product[];
-  addItem: (
-    product: Product | null,
-    custom: { name: string; price: number } | undefined,
-    qty: number,
-    notes: string,
-  ) => void;
+  addItem: (product: Product, qty: number, notes: string) => void;
   removeItem: (item: TabLineItem) => void;
   changeItemQty: (item: TabLineItem, delta: number) => void;
   addPayment: (p: Omit<TabPayment, "id">) => void;
@@ -545,9 +524,6 @@ function TabDetail({
   const [pickerProductId, setPickerProductId] = useState("");
   const [pickerQty, setPickerQty] = useState(1);
   const [pickerNotes, setPickerNotes] = useState("");
-  const [customMode, setCustomMode] = useState(false);
-  const [customName, setCustomName] = useState("");
-  const [customPrice, setCustomPrice] = useState("");
 
   const [payMethod, setPayMethod] = useState<PaymentMethod>("Card");
   const [payAmount, setPayAmount] = useState(totals.balance.toFixed(2));
@@ -556,23 +532,12 @@ function TabDetail({
   const product = allProducts.find((p) => p.id === pickerProductId) ?? null;
 
   const submitAdd = () => {
-    if (customMode) {
-      const price = Number(customPrice);
-      if (!customName.trim() || Number.isNaN(price)) {
-        alert("Custom item needs a name and price.");
-        return;
-      }
-      addItem(null, { name: customName.trim(), price }, pickerQty, pickerNotes);
-      setCustomName("");
-      setCustomPrice("");
-    } else {
-      if (!product) {
-        alert("Pick a product.");
-        return;
-      }
-      addItem(product, undefined, pickerQty, pickerNotes);
-      setPickerProductId("");
+    if (!product) {
+      alert("Pick a product.");
+      return;
     }
+    addItem(product, pickerQty, pickerNotes);
+    setPickerProductId("");
     setPickerQty(1);
     setPickerNotes("");
   };
@@ -715,62 +680,32 @@ function TabDetail({
                   className="card"
                   style={{ padding: 12, background: "var(--surface-2)" }}
                 >
-                  <div className="row between" style={{ marginBottom: 8 }}>
-                    <strong style={{ fontSize: 13 }}>Add to tab</strong>
-                    <div className="row">
-                      <button
-                        className={`btn sm ${customMode ? "secondary" : ""}`}
-                        onClick={() => setCustomMode(false)}
-                      >
-                        From inventory
-                      </button>
-                      <button
-                        className={`btn sm ${customMode ? "" : "secondary"}`}
-                        onClick={() => setCustomMode(true)}
-                      >
-                        Custom
-                      </button>
-                    </div>
+                  <strong style={{ fontSize: 13 }}>Add from inventory</strong>
+                  <div className="field" style={{ marginTop: 8 }}>
+                    <label>Product</label>
+                    <select
+                      className="select"
+                      value={pickerProductId}
+                      onChange={(e) => setPickerProductId(e.target.value)}
+                    >
+                      <option value="">— Select product —</option>
+                      {allProducts.map((p) => (
+                        <option
+                          key={p.id}
+                          value={p.id}
+                          disabled={p.stock <= 0}
+                        >
+                          {p.name} · {formatMoney(p.price)} · stock {p.stock}
+                          {p.stock <= 0 ? " (out)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                    {allProducts.length === 0 && (
+                      <small className="muted">
+                        No products in inventory yet — add some in Pro Shop.
+                      </small>
+                    )}
                   </div>
-                  {customMode ? (
-                    <div className="grid cols-2">
-                      <div className="field">
-                        <label>Description</label>
-                        <input
-                          className="input"
-                          value={customName}
-                          onChange={(e) => setCustomName(e.target.value)}
-                          placeholder="e.g. Lesson fee"
-                        />
-                      </div>
-                      <div className="field">
-                        <label>Unit price ($)</label>
-                        <input
-                          className="input"
-                          type="number"
-                          step="0.01"
-                          value={customPrice}
-                          onChange={(e) => setCustomPrice(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="field">
-                      <label>Product</label>
-                      <select
-                        className="select"
-                        value={pickerProductId}
-                        onChange={(e) => setPickerProductId(e.target.value)}
-                      >
-                        <option value="">— Select product —</option>
-                        {allProducts.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} · {formatMoney(p.price)} · stock {p.stock}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
                   <div className="grid cols-2" style={{ marginTop: 8 }}>
                     <div className="field">
                       <label>Qty</label>

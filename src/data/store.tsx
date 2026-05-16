@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { Course, DataState } from "./types";
+import type { Course, DataState, PlayerTab } from "./types";
 import { emptyData, sampleData } from "./seed";
 import { DEFAULT_CLOSE, DEFAULT_OPEN } from "./utils";
 
@@ -32,6 +32,11 @@ const normalizeCourse = (c: Course): Course => ({
   closeTime: c.closeTime || DEFAULT_CLOSE,
 });
 
+const normalizeTab = (t: PlayerTab): PlayerTab => ({
+  ...t,
+  items: t.items.filter((li) => Boolean(li.productId)),
+});
+
 const load = (): DataState => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -41,6 +46,7 @@ const load = (): DataState => {
     return {
       ...merged,
       courses: merged.courses.map(normalizeCourse),
+      tabs: merged.tabs.map(normalizeTab),
     };
   } catch {
     return emptyData;
