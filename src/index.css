@@ -516,6 +516,71 @@ textarea {
   flex-wrap: wrap;
 }
 
+/* Weekly schedule grid */
+.week-grid th,
+.week-grid td {
+  text-align: center;
+  vertical-align: top;
+}
+.week-grid td:first-child,
+.week-grid th:first-child {
+  text-align: left;
+}
+.week-cell {
+  min-width: 110px;
+  min-height: 56px;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+.week-cell:hover {
+  background: #f3f7ee;
+}
+.cell-add {
+  color: #c1cdc1;
+  font-size: 16px;
+  font-weight: 600;
+}
+.week-cell:hover .cell-add {
+  color: var(--primary);
+}
+.cell-shifts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+.shift-pill {
+  display: inline-flex;
+  align-items: center;
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  border: 1px solid #b8d8c2;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 100ms ease, border-color 100ms ease;
+}
+.shift-pill:hover {
+  background: #c6e0ce;
+  border-color: var(--primary);
+}
+
+/* Coverage cells */
+.coverage-cell {
+  min-width: 90px;
+}
+.coverage-cell.empty {
+  background: #fbe6e6;
+}
+.coverage-cell.low {
+  background: #fdf3dc;
+}
+.coverage-cell.good {
+  background: #e7f4ec;
+}
+
 /* Tee time slot */
 .slot {
   display: flex;

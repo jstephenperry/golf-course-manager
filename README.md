@@ -19,10 +19,10 @@ it's a self-contained demo with no backend required.
 | Module        | What it does                                                       |
 | ------------- | ------------------------------------------------------------------ |
 | Dashboard     | Today's tee sheet, active shifts, restock alerts, upcoming events. |
-| Tee Times     | Book / edit / cancel tee times, check players in, mark completed.  |
+| Tee Times     | 15-minute slot grid per course (using per-course open/close hours); book, check in, complete, cancel. |
 | Members       | Roster, tiers, handicap, balance, contact info.                    |
-| Courses       | Course details, rating/slope, status (Open / Cart Path Only / Closed). |
-| Staff         | Roster plus a daily shift schedule.                                |
+| Courses       | Course details, rating/slope, operating hours, status.             |
+| Staff         | Roster, weekly schedule grid, department coverage, and recurring weekly templates that can be applied to any week. |
 | Pro Shop      | Inventory by category, stock adjustments, low-stock alerts.        |
 | Tournaments   | Schedule events, manage registrations, format & entry fee.         |
 | Maintenance   | Task list with priority, assignment, due date and status workflow. |

@@ -7,8 +7,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { DataState } from "./types";
+import type { Course, DataState } from "./types";
 import { emptyData, sampleData } from "./seed";
+import { DEFAULT_CLOSE, DEFAULT_OPEN } from "./utils";
 
 const STORAGE_KEY = "fairway-hq:data:v1";
 
@@ -25,12 +26,22 @@ interface StoreApi {
 
 const StoreContext = createContext<StoreApi | null>(null);
 
+const normalizeCourse = (c: Course): Course => ({
+  ...c,
+  openTime: c.openTime || DEFAULT_OPEN,
+  closeTime: c.closeTime || DEFAULT_CLOSE,
+});
+
 const load = (): DataState => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return emptyData;
     const parsed = JSON.parse(raw) as Partial<DataState>;
-    return { ...emptyData, ...parsed };
+    const merged = { ...emptyData, ...parsed };
+    return {
+      ...merged,
+      courses: merged.courses.map(normalizeCourse),
+    };
   } catch {
     return emptyData;
   }

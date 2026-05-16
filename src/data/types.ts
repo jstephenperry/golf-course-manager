@@ -22,6 +22,8 @@ export interface Course {
   rating: number;
   slope: number;
   status: "Open" | "Closed" | "Cart Path Only";
+  openTime: string;
+  closeTime: string;
   notes: string;
 }
 
@@ -61,6 +63,17 @@ export interface Shift {
   id: string;
   staffId: string;
   date: string;
+  start: string;
+  end: string;
+  notes: string;
+}
+
+export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+export interface WeeklyTemplate {
+  id: string;
+  staffId: string;
+  dayOfWeek: DayOfWeek;
   start: string;
   end: string;
   notes: string;
@@ -124,6 +137,7 @@ export interface DataState {
   teeTimes: TeeTime[];
   staff: StaffMember[];
   shifts: Shift[];
+  weeklyTemplates: WeeklyTemplate[];
   products: Product[];
   tournaments: Tournament[];
   maintenance: MaintenanceTask[];

@@ -11,6 +11,8 @@ const blank = (): Omit<Course, "id"> => ({
   rating: 72,
   slope: 130,
   status: "Open",
+  openTime: "06:00",
+  closeTime: "18:00",
   notes: "",
 });
 
@@ -111,6 +113,13 @@ export function Courses() {
                     {c.holes}
                   </span>
                 </div>
+              </div>
+            )}
+
+            {c.holes > 0 && (
+              <div className="muted" style={{ fontSize: 12, marginTop: 10 }}>
+                Operating hours: {c.openTime || "06:00"} –{" "}
+                {c.closeTime || "18:00"}
               </div>
             )}
 
@@ -236,6 +245,32 @@ export function Courses() {
                 <option>Cart Path Only</option>
                 <option>Closed</option>
               </select>
+            </div>
+          </div>
+          <div className="grid cols-2">
+            <div className="field">
+              <label>Opens at</label>
+              <input
+                className="input"
+                type="time"
+                step={900}
+                value={form.openTime}
+                onChange={(e) =>
+                  setForm({ ...form, openTime: e.target.value })
+                }
+              />
+            </div>
+            <div className="field">
+              <label>Closes at</label>
+              <input
+                className="input"
+                type="time"
+                step={900}
+                value={form.closeTime}
+                onChange={(e) =>
+                  setForm({ ...form, closeTime: e.target.value })
+                }
+              />
             </div>
           </div>
           <div className="field">

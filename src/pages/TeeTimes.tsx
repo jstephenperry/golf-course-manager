@@ -1,13 +1,30 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Modal } from "../components/Modal";
 import { uid, useStore } from "../data/store";
 import type { TeeTime } from "../data/types";
+import {
+  TEE_SLOT_INTERVAL_MIN,
+  courseClose,
+  courseOpen,
+  generateSlots,
+  snapToSlot,
+} from "../data/utils";
 
-const todayIso = () => new Date().toISOString().slice(0, 10);
+const todayIso = () => {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
 
-const blankForm = (date: string, courseId: string): Omit<TeeTime, "id"> => ({
+const blankForm = (
+  date: string,
+  courseId: string,
+  time: string,
+): Omit<TeeTime, "id"> => ({
   date,
-  time: "08:00",
+  time,
   courseId,
   players: [],
   cart: true,
@@ -24,15 +41,47 @@ export function TeeTimes() {
   const [editing, setEditing] = useState<TeeTime | null>(null);
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState<Omit<TeeTime, "id">>(
-    blankForm(date, courseId),
+    blankForm(date, courseId, "08:00"),
   );
 
+  useEffect(() => {
+    if (!courseId && playableCourses[0]) {
+      setCourseId(playableCourses[0].id);
+    }
+  }, [courseId, playableCourses]);
+
+  const course = data.courses.find((c) => c.id === courseId);
   const slots = useMemo(
     () =>
+      course
+        ? generateSlots(
+            courseOpen(course),
+            courseClose(course),
+            TEE_SLOT_INTERVAL_MIN,
+          )
+        : [],
+    [course],
+  );
+
+  const byTime = useMemo(() => {
+    const map = new Map<string, TeeTime>();
+    data.teeTimes
+      .filter((t) => t.date === date && t.courseId === courseId)
+      .forEach((t) => map.set(t.time, t));
+    return map;
+  }, [data.teeTimes, date, courseId]);
+
+  const offGridBookings = useMemo(
+    () =>
       data.teeTimes
-        .filter((t) => t.date === date && t.courseId === courseId)
+        .filter(
+          (t) =>
+            t.date === date &&
+            t.courseId === courseId &&
+            !slots.includes(t.time),
+        )
         .sort((a, b) => a.time.localeCompare(b.time)),
-    [data.teeTimes, date, courseId],
+    [data.teeTimes, date, courseId, slots],
   );
 
   const memberName = (id: string) => {
@@ -40,25 +89,33 @@ export function TeeTimes() {
     return m ? `${m.firstName} ${m.lastName}` : id;
   };
 
-  const startCreate = () => {
-    setForm(blankForm(date, courseId));
+  const openCreate = (time: string) => {
+    if (!course) {
+      alert("Add a course first.");
+      return;
+    }
+    setForm(blankForm(date, courseId, time));
     setCreating(true);
   };
 
-  const startEdit = (t: TeeTime) => {
+  const openEdit = (t: TeeTime) => {
     setEditing(t);
     setForm({ ...t });
   };
 
   const save = () => {
+    const snapped = course
+      ? snapToSlot(form.time, courseOpen(course), TEE_SLOT_INTERVAL_MIN)
+      : form.time;
+    const next = { ...form, time: snapped };
     if (editing) {
-      const updated: TeeTime = { ...editing, ...form };
+      const updated: TeeTime = { ...editing, ...next };
       update("teeTimes", (list) =>
         list.map((t) => (t.id === editing.id ? updated : t)),
       );
       setEditing(null);
     } else {
-      const created: TeeTime = { id: uid("tt"), ...form };
+      const created: TeeTime = { id: uid("tt"), ...next };
       update("teeTimes", (list) => [...list, created]);
       setCreating(false);
     }
@@ -75,6 +132,35 @@ export function TeeTimes() {
       list.map((t) => (t.id === id ? { ...t, status } : t)),
     );
   };
+
+  const statusPill = (t: TeeTime) => (
+    <span
+      className={`pill ${
+        t.status === "Checked In"
+          ? "green"
+          : t.status === "Completed"
+            ? "gray"
+            : t.status === "Cancelled"
+              ? "red"
+              : "gold"
+      }`}
+    >
+      {t.status}
+    </span>
+  );
+
+  if (playableCourses.length === 0) {
+    return (
+      <div className="card empty">
+        Add a playable course (with holes &gt; 0) to begin booking tee times.
+      </div>
+    );
+  }
+
+  const bookedCount = Array.from(byTime.values()).filter(
+    (t) => t.status !== "Cancelled",
+  ).length;
+  const openCount = slots.length - bookedCount;
 
   return (
     <div className="stack">
@@ -104,89 +190,172 @@ export function TeeTimes() {
                 ))}
               </select>
             </div>
+            {course && (
+              <div className="muted" style={{ fontSize: 12 }}>
+                {courseOpen(course)} – {courseClose(course)} ·{" "}
+                {TEE_SLOT_INTERVAL_MIN}-minute intervals
+              </div>
+            )}
           </div>
-          <button className="btn" onClick={startCreate}>
-            + Book Tee Time
-          </button>
+          <div className="row">
+            <span className="pill green">{bookedCount} booked</span>
+            <span className="pill">{openCount} open</span>
+          </div>
         </div>
 
         {slots.length === 0 ? (
           <div className="empty">
-            No tee times for this course on this date. Click "Book Tee Time" to
-            add one.
+            This course has no operating hours configured.
           </div>
         ) : (
-          <div className="grid cols-3">
-            {slots.map((t) => (
-              <div className="slot" key={t.id}>
-                <div className="slot-head">
-                  <span className="time">{t.time}</span>
-                  <span
-                    className={`pill ${
-                      t.status === "Checked In"
-                        ? "green"
-                        : t.status === "Completed"
-                          ? "gray"
-                          : t.status === "Cancelled"
-                            ? "red"
-                            : "gold"
-                    }`}
-                  >
-                    {t.status}
-                  </span>
-                </div>
-                <div>
-                  {t.players.length === 0 ? (
-                    <span className="muted">No players assigned</span>
-                  ) : (
-                    <div className="chip-list">
-                      {t.players.map((id) => (
-                        <span key={id} className="pill">
-                          {memberName(id)}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="muted" style={{ fontSize: 12 }}>
-                  {t.cart ? "Cart" : "Walking"}
-                  {t.notes ? ` · ${t.notes}` : ""}
-                </div>
-                <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
-                  {t.status === "Booked" && (
-                    <button
-                      className="btn sm"
-                      onClick={() => setStatus(t.id, "Checked In")}
-                    >
-                      Check In
-                    </button>
-                  )}
-                  {t.status === "Checked In" && (
-                    <button
-                      className="btn sm secondary"
-                      onClick={() => setStatus(t.id, "Completed")}
-                    >
-                      Mark Complete
-                    </button>
-                  )}
-                  <button
-                    className="btn sm secondary"
-                    onClick={() => startEdit(t)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="btn sm danger"
-                    onClick={() => remove(t.id)}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+          <table className="table">
+            <thead>
+              <tr>
+                <th style={{ width: 90 }}>Time</th>
+                <th>Players</th>
+                <th style={{ width: 110 }}>Status</th>
+                <th style={{ width: 110 }}>Cart</th>
+                <th style={{ width: 1 }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {slots.map((time) => {
+                const t = byTime.get(time);
+                if (!t) {
+                  return (
+                    <tr key={time}>
+                      <td>
+                        <strong>{time}</strong>
+                      </td>
+                      <td className="muted">Open</td>
+                      <td></td>
+                      <td></td>
+                      <td>
+                        <div className="table-actions">
+                          <button
+                            className="btn sm"
+                            onClick={() => openCreate(time)}
+                          >
+                            + Book
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+                return (
+                  <tr key={time}>
+                    <td>
+                      <strong>{time}</strong>
+                    </td>
+                    <td>
+                      {t.players.length === 0 ? (
+                        <span className="muted">No players assigned</span>
+                      ) : (
+                        <div className="chip-list">
+                          {t.players.map((id) => (
+                            <span key={id} className="pill">
+                              {memberName(id)}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {t.notes && (
+                        <div className="muted" style={{ fontSize: 12 }}>
+                          {t.notes}
+                        </div>
+                      )}
+                    </td>
+                    <td>{statusPill(t)}</td>
+                    <td>
+                      <span className="muted">
+                        {t.cart ? "Cart" : "Walking"}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="table-actions">
+                        {t.status === "Booked" && (
+                          <button
+                            className="btn sm"
+                            onClick={() => setStatus(t.id, "Checked In")}
+                          >
+                            Check In
+                          </button>
+                        )}
+                        {t.status === "Checked In" && (
+                          <button
+                            className="btn sm secondary"
+                            onClick={() => setStatus(t.id, "Completed")}
+                          >
+                            Done
+                          </button>
+                        )}
+                        <button
+                          className="btn sm secondary"
+                          onClick={() => openEdit(t)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="btn sm danger"
+                          onClick={() => remove(t.id)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </div>
+
+      {offGridBookings.length > 0 && (
+        <div className="card">
+          <h2 style={{ marginBottom: 8 }}>Off-grid bookings</h2>
+          <div className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
+            These bookings don't sit on a {TEE_SLOT_INTERVAL_MIN}-minute slot.
+            Edit one to snap it to the grid.
+          </div>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Players</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {offGridBookings.map((t) => (
+                <tr key={t.id}>
+                  <td>
+                    <strong>{t.time}</strong>
+                  </td>
+                  <td>
+                    {t.players.length === 0
+                      ? "—"
+                      : t.players.map(memberName).join(", ")}
+                  </td>
+                  <td>{statusPill(t)}</td>
+                  <td>
+                    <div className="table-actions">
+                      <button
+                        className="btn sm secondary"
+                        onClick={() => openEdit(t)}
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {(creating || editing) && (
         <Modal
@@ -210,12 +379,26 @@ export function TeeTimes() {
             </div>
             <div className="field">
               <label>Time</label>
-              <input
-                className="input"
-                type="time"
+              <select
+                className="select"
                 value={form.time}
                 onChange={(e) => setForm({ ...form, time: e.target.value })}
-              />
+              >
+                {(() => {
+                  const c = data.courses.find((x) => x.id === form.courseId);
+                  const slotList = c
+                    ? generateSlots(courseOpen(c), courseClose(c))
+                    : [];
+                  return slotList.includes(form.time)
+                    ? slotList.map((s) => <option key={s}>{s}</option>)
+                    : [
+                        <option key={form.time} value={form.time}>
+                          {form.time} (off-grid)
+                        </option>,
+                        ...slotList.map((s) => <option key={s}>{s}</option>),
+                      ];
+                })()}
+              </select>
             </div>
           </div>
           <div className="field">
