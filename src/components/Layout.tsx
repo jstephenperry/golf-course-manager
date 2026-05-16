@@ -13,7 +13,16 @@ const NAV = [
 ];
 
 export function Layout() {
-  const { reset } = useStore();
+  const { reset, loadSampleData, data } = useStore();
+  const hasData =
+    data.courses.length +
+      data.members.length +
+      data.teeTimes.length +
+      data.staff.length +
+      data.products.length +
+      data.tournaments.length +
+      data.maintenance.length >
+    0;
   const location = useLocation();
   const current = NAV.find((n) =>
     n.to === "/" ? location.pathname === "/" : location.pathname.startsWith(n.to),
@@ -49,16 +58,34 @@ export function Layout() {
             className="reset-btn"
             onClick={() => {
               if (
-                window.confirm(
-                  "Reset all data back to the demo seed? This will wipe local changes.",
+                hasData &&
+                !window.confirm(
+                  "Replace current data with the sample dataset?",
                 )
               ) {
-                reset();
+                return;
               }
+              loadSampleData();
             }}
           >
-            Reset demo data
+            Load sample data
           </button>
+          {hasData && (
+            <button
+              className="reset-btn"
+              onClick={() => {
+                if (
+                  window.confirm(
+                    "Clear all data? This will wipe everything from local storage.",
+                  )
+                ) {
+                  reset();
+                }
+              }}
+            >
+              Clear all data
+            </button>
+          )}
           <div style={{ marginTop: 8 }}>v0.1 · local demo</div>
         </div>
       </aside>

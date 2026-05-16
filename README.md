@@ -46,6 +46,6 @@ npm run typecheck  # type-check only
 
 ## Data
 
-All state lives under the `fairway-hq:data:v1` key in `localStorage`. Use the
-**"Reset demo data"** button in the sidebar footer to wipe local edits and
-restore the seed fixtures.
+All state lives under the `fairway-hq:data:v1` key in `localStorage`. The app
+starts empty by default. Use **"Load sample data"** in the sidebar footer to
+populate it with a demo dataset, or **"Clear all data"** to wipe everything.

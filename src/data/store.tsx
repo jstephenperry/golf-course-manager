@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import type { DataState } from "./types";
-import { seedData } from "./seed";
+import { emptyData, sampleData } from "./seed";
 
 const STORAGE_KEY = "fairway-hq:data:v1";
 
@@ -20,6 +20,7 @@ interface StoreApi {
   data: DataState;
   update: <K extends keyof DataState>(key: K, updater: Updater<K>) => void;
   reset: () => void;
+  loadSampleData: () => void;
 }
 
 const StoreContext = createContext<StoreApi | null>(null);
@@ -27,11 +28,11 @@ const StoreContext = createContext<StoreApi | null>(null);
 const load = (): DataState => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return seedData;
+    if (!raw) return emptyData;
     const parsed = JSON.parse(raw) as Partial<DataState>;
-    return { ...seedData, ...parsed };
+    return { ...emptyData, ...parsed };
   } catch {
-    return seedData;
+    return emptyData;
   }
 };
 
@@ -50,11 +51,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   const reset = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
-    setData(seedData);
+    setData(emptyData);
   }, []);
 
-  const value = useMemo(() => ({ data, update, reset }), [data, update, reset]);
+  const loadSampleData = useCallback(() => {
+    setData(sampleData);
+  }, []);
+
+  const value = useMemo(
+    () => ({ data, update, reset, loadSampleData }),
+    [data, update, reset, loadSampleData],
+  );
 
   return (
     <StoreContext.Provider value={value}>{children}</StoreContext.Provider>

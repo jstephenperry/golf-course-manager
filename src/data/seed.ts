@@ -8,7 +8,18 @@ const addDays = (n: number) => {
   return iso(d);
 };
 
-export const seedData: DataState = {
+export const emptyData: DataState = {
+  courses: [],
+  members: [],
+  teeTimes: [],
+  staff: [],
+  shifts: [],
+  products: [],
+  tournaments: [],
+  maintenance: [],
+};
+
+export const sampleData: DataState = {
   courses: [
     {
       id: "c1",
