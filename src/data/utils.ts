@@ -1,4 +1,4 @@
-import type { Course, DayOfWeek, Shift } from "./types";
+import type { Course, DayOfWeek, PlayerTab, Shift } from "./types";
 
 export const TEE_SLOT_INTERVAL_MIN = 15;
 export const DEFAULT_OPEN = "06:00";
@@ -137,4 +137,49 @@ export function shiftsForDate(shifts: Shift[], date: string): Shift[] {
   return shifts
     .filter((s) => s.date === date)
     .sort((a, b) => a.start.localeCompare(b.start));
+}
+
+export interface TabTotals {
+  subtotal: number;
+  tax: number;
+  tip: number;
+  total: number;
+  paid: number;
+  balance: number;
+}
+
+export function tabTotals(tab: PlayerTab): TabTotals {
+  const subtotal = tab.items.reduce(
+    (sum, li) => sum + li.unitPrice * li.quantity,
+    0,
+  );
+  const tax = subtotal * (tab.taxRate || 0);
+  const tip = tab.tipAmount || 0;
+  const total = subtotal + tax + tip;
+  const paid = tab.payments.reduce((sum, p) => sum + p.amount, 0);
+  return {
+    subtotal,
+    tax,
+    tip,
+    total,
+    paid,
+    balance: Math.max(0, total - paid),
+  };
+}
+
+export function formatMoney(amount: number): string {
+  const sign = amount < 0 ? "-" : "";
+  return `${sign}$${Math.abs(amount).toFixed(2)}`;
+}
+
+export function formatDateTime(iso: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }

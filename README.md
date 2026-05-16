@@ -24,6 +24,7 @@ it's a self-contained demo with no backend required.
 | Courses       | Course details, rating/slope, operating hours, status.             |
 | Staff         | Roster, weekly schedule grid, department coverage, and recurring weekly templates that can be applied to any week. |
 | Pro Shop      | Inventory by category, stock adjustments, low-stock alerts.        |
+| Player Tabs   | Open a tab per group, add inventory or custom items (auto-decrements stock), accept Cash / Card / Member Charge / Comp payments, and settle at the end of the round. |
 | Tournaments   | Schedule events, manage registrations, format & entry fee.         |
 | Maintenance   | Task list with priority, assignment, due date and status workflow. |
 

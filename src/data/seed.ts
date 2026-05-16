@@ -18,6 +18,7 @@ export const emptyData: DataState = {
   products: [],
   tournaments: [],
   maintenance: [],
+  tabs: [],
 };
 
 export const sampleData: DataState = {
@@ -337,6 +338,40 @@ export const sampleData: DataState = {
       dueDate: addDays(0),
       priority: "Low",
       status: "Open",
+      notes: "",
+    },
+  ],
+  tabs: [
+    {
+      id: "tab1",
+      openedAt: `${addDays(0)}T08:05:00`,
+      status: "Open",
+      memberIds: ["m1", "m3"],
+      guests: [],
+      teeTimeId: "t1",
+      items: [
+        {
+          id: "li1",
+          productId: "p5",
+          name: "Iced Tea (Can)",
+          unitPrice: 3.5,
+          quantity: 2,
+          notes: "",
+          addedAt: `${addDays(0)}T08:10:00`,
+        },
+        {
+          id: "li2",
+          productId: "p1",
+          name: "Pro V1 Dozen",
+          unitPrice: 54.99,
+          quantity: 1,
+          notes: "Lost ball on 7",
+          addedAt: `${addDays(0)}T09:30:00`,
+        },
+      ],
+      payments: [],
+      tipAmount: 0,
+      taxRate: 0.0825,
       notes: "",
     },
   ],

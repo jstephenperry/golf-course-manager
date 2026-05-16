@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useStore } from "../data/store";
+import { formatMoney, tabTotals } from "../data/utils";
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
@@ -16,6 +17,11 @@ export function Dashboard() {
     (m) => m.status !== "Completed",
   ).length;
   const lowStock = data.products.filter((p) => p.stock <= p.reorderLevel);
+  const openTabs = data.tabs.filter((t) => t.status === "Open");
+  const openTabsBalance = openTabs.reduce(
+    (sum, t) => sum + tabTotals(t).balance,
+    0,
+  );
   const upcomingTournaments = data.tournaments
     .filter((t) => t.date >= today && t.status !== "Cancelled")
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -35,7 +41,7 @@ export function Dashboard() {
 
   return (
     <div className="stack">
-      <div className="grid cols-4">
+      <div className="grid cols-5">
         <div className="kpi accent">
           <span className="label">Tee Times Today</span>
           <span className="value">{todaysTeeTimes.length}</span>
@@ -67,6 +73,13 @@ export function Dashboard() {
           <span className="label">Low Stock Items</span>
           <span className="value">{lowStock.length}</span>
           <span className="delta">in pro shop</span>
+        </div>
+        <div className="kpi">
+          <span className="label">Open Tabs</span>
+          <span className="value">{openTabs.length}</span>
+          <span className="delta">
+            outstanding {formatMoney(openTabsBalance)}
+          </span>
         </div>
       </div>
 

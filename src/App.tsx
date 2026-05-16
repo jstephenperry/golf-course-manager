@@ -7,6 +7,7 @@ import { Members } from "./pages/Members";
 import { Courses } from "./pages/Courses";
 import { Staff } from "./pages/Staff";
 import { ProShop } from "./pages/ProShop";
+import { Tabs } from "./pages/Tabs";
 import { Tournaments } from "./pages/Tournaments";
 import { Maintenance } from "./pages/Maintenance";
 
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="courses" element={<Courses />} />
           <Route path="staff" element={<Staff />} />
           <Route path="pro-shop" element={<ProShop />} />
+          <Route path="tabs" element={<Tabs />} />
           <Route path="tournaments" element={<Tournaments />} />
           <Route path="maintenance" element={<Maintenance />} />
           <Route path="*" element={<Dashboard />} />

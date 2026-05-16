@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Modal } from "../components/Modal";
 import { uid, useStore } from "../data/store";
-import type { TeeTime } from "../data/types";
+import type { PlayerTab, TeeTime } from "../data/types";
 import {
   TEE_SLOT_INTERVAL_MIN,
   courseClose,
@@ -34,6 +35,7 @@ const blankForm = (
 
 export function TeeTimes() {
   const { data, update } = useStore();
+  const navigate = useNavigate();
   const playableCourses = data.courses.filter((c) => c.holes > 0);
 
   const [date, setDate] = useState(todayIso());
@@ -131,6 +133,31 @@ export function TeeTimes() {
     update("teeTimes", (list) =>
       list.map((t) => (t.id === id ? { ...t, status } : t)),
     );
+  };
+
+  const openOrCreateTab = (t: TeeTime) => {
+    const existing = data.tabs.find(
+      (tab) => tab.teeTimeId === t.id && tab.status === "Open",
+    );
+    if (existing) {
+      navigate(`/tabs?tab=${existing.id}`);
+      return;
+    }
+    const tab: PlayerTab = {
+      id: uid("tab"),
+      openedAt: new Date().toISOString(),
+      status: "Open",
+      memberIds: t.players,
+      guests: [],
+      teeTimeId: t.id,
+      items: [],
+      payments: [],
+      tipAmount: 0,
+      taxRate: 0.0825,
+      notes: "",
+    };
+    update("tabs", (list) => [tab, ...list]);
+    navigate(`/tabs?tab=${tab.id}`);
   };
 
   const statusPill = (t: TeeTime) => (
@@ -290,6 +317,23 @@ export function TeeTimes() {
                             Done
                           </button>
                         )}
+                        {(() => {
+                          const tab = data.tabs.find(
+                            (x) =>
+                              x.teeTimeId === t.id && x.status === "Open",
+                          );
+                          return (
+                            <button
+                              className="btn sm secondary"
+                              onClick={() => openOrCreateTab(t)}
+                              title={
+                                tab ? "Open existing tab" : "Start a new tab"
+                              }
+                            >
+                              {tab ? "Tab" : "Open Tab"}
+                            </button>
+                          );
+                        })()}
                         <button
                           className="btn sm secondary"
                           onClick={() => openEdit(t)}

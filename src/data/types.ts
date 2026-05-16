@@ -131,6 +131,44 @@ export interface MaintenanceTask {
   notes: string;
 }
 
+export type TabStatus = "Open" | "Settled" | "Voided";
+
+export type PaymentMethod = "Cash" | "Card" | "Member Charge" | "Comp";
+
+export interface TabLineItem {
+  id: string;
+  productId?: string;
+  name: string;
+  unitPrice: number;
+  quantity: number;
+  notes: string;
+  addedAt: string;
+}
+
+export interface TabPayment {
+  id: string;
+  method: PaymentMethod;
+  amount: number;
+  payerMemberId?: string;
+  note: string;
+  paidAt: string;
+}
+
+export interface PlayerTab {
+  id: string;
+  openedAt: string;
+  closedAt?: string;
+  status: TabStatus;
+  memberIds: string[];
+  guests: string[];
+  teeTimeId?: string;
+  items: TabLineItem[];
+  payments: TabPayment[];
+  tipAmount: number;
+  taxRate: number;
+  notes: string;
+}
+
 export interface DataState {
   members: Member[];
   courses: Course[];
@@ -141,4 +179,5 @@ export interface DataState {
   products: Product[];
   tournaments: Tournament[];
   maintenance: MaintenanceTask[];
+  tabs: PlayerTab[];
 }
