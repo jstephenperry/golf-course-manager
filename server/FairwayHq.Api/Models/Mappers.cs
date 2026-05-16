@@ -1,0 +1,141 @@
+using System.Text.Json;
+
+namespace FairwayHq.Api.Models;
+
+public static class Mappers
+{
+    private static readonly JsonSerializerOptions Json = new();
+
+    private static List<string> ParseList(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return new List<string>();
+        try { return JsonSerializer.Deserialize<List<string>>(json, Json) ?? new List<string>(); }
+        catch { return new List<string>(); }
+    }
+
+    private static string SerializeList(IEnumerable<string> items) =>
+        JsonSerializer.Serialize(items.ToList(), Json);
+
+    public static MemberDto ToDto(this Member m) =>
+        new(m.Id, m.FirstName, m.LastName, m.Email, m.Phone, m.Tier,
+            m.Handicap, m.JoinDate, m.Active, m.Balance);
+
+    public static void Apply(this Member m, MemberDto d)
+    {
+        m.FirstName = d.FirstName; m.LastName = d.LastName;
+        m.Email = d.Email; m.Phone = d.Phone; m.Tier = d.Tier;
+        m.Handicap = d.Handicap; m.JoinDate = d.JoinDate;
+        m.Active = d.Active; m.Balance = d.Balance;
+    }
+
+    public static CourseDto ToDto(this Course c) =>
+        new(c.Id, c.Name, c.Holes, c.Par, c.Yardage, c.Rating, c.Slope,
+            c.Status, c.OpenTime, c.CloseTime, c.Notes);
+
+    public static void Apply(this Course c, CourseDto d)
+    {
+        c.Name = d.Name; c.Holes = d.Holes; c.Par = d.Par; c.Yardage = d.Yardage;
+        c.Rating = d.Rating; c.Slope = d.Slope; c.Status = d.Status;
+        c.OpenTime = d.OpenTime; c.CloseTime = d.CloseTime; c.Notes = d.Notes;
+    }
+
+    public static TeeTimeDto ToDto(this TeeTime t) =>
+        new(t.Id, t.Date, t.Time, t.CourseId, ParseList(t.PlayersJson),
+            t.Cart, t.Status, t.Notes);
+
+    public static void Apply(this TeeTime t, TeeTimeDto d)
+    {
+        t.Date = d.Date; t.Time = d.Time; t.CourseId = d.CourseId;
+        t.PlayersJson = SerializeList(d.Players); t.Cart = d.Cart;
+        t.Status = d.Status; t.Notes = d.Notes;
+    }
+
+    public static StaffMemberDto ToDto(this StaffMember s) =>
+        new(s.Id, s.FirstName, s.LastName, s.Role, s.Email, s.Phone,
+            s.HourlyRate, s.Active);
+
+    public static void Apply(this StaffMember s, StaffMemberDto d)
+    {
+        s.FirstName = d.FirstName; s.LastName = d.LastName; s.Role = d.Role;
+        s.Email = d.Email; s.Phone = d.Phone; s.HourlyRate = d.HourlyRate;
+        s.Active = d.Active;
+    }
+
+    public static ShiftDto ToDto(this Shift s) =>
+        new(s.Id, s.StaffId, s.Date, s.Start, s.End, s.Notes);
+
+    public static void Apply(this Shift s, ShiftDto d)
+    {
+        s.StaffId = d.StaffId; s.Date = d.Date;
+        s.Start = d.Start; s.End = d.End; s.Notes = d.Notes;
+    }
+
+    public static WeeklyTemplateDto ToDto(this WeeklyTemplate w) =>
+        new(w.Id, w.StaffId, w.DayOfWeek, w.Start, w.End, w.Notes);
+
+    public static void Apply(this WeeklyTemplate w, WeeklyTemplateDto d)
+    {
+        w.StaffId = d.StaffId; w.DayOfWeek = d.DayOfWeek;
+        w.Start = d.Start; w.End = d.End; w.Notes = d.Notes;
+    }
+
+    public static ProductDto ToDto(this Product p) =>
+        new(p.Id, p.Name, p.Category, p.Sku, p.Price, p.Cost,
+            p.Stock, p.ReorderLevel);
+
+    public static void Apply(this Product p, ProductDto d)
+    {
+        p.Name = d.Name; p.Category = d.Category; p.Sku = d.Sku;
+        p.Price = d.Price; p.Cost = d.Cost; p.Stock = d.Stock;
+        p.ReorderLevel = d.ReorderLevel;
+    }
+
+    public static TournamentDto ToDto(this Tournament t) =>
+        new(t.Id, t.Name, t.Date, t.Format, t.CourseId, t.EntryFee,
+            t.MaxPlayers, ParseList(t.RegisteredJson), t.Status);
+
+    public static void Apply(this Tournament t, TournamentDto d)
+    {
+        t.Name = d.Name; t.Date = d.Date; t.Format = d.Format;
+        t.CourseId = d.CourseId; t.EntryFee = d.EntryFee;
+        t.MaxPlayers = d.MaxPlayers; t.Status = d.Status;
+        t.RegisteredJson = SerializeList(d.Registered);
+    }
+
+    public static MaintenanceTaskDto ToDto(this MaintenanceTask m) =>
+        new(m.Id, m.Title, m.Category, m.CourseId, m.AssignedTo,
+            m.DueDate, m.Priority, m.Status, m.Notes);
+
+    public static void Apply(this MaintenanceTask m, MaintenanceTaskDto d)
+    {
+        m.Title = d.Title; m.Category = d.Category; m.CourseId = d.CourseId;
+        m.AssignedTo = d.AssignedTo; m.DueDate = d.DueDate;
+        m.Priority = d.Priority; m.Status = d.Status; m.Notes = d.Notes;
+    }
+
+    public static TabLineItemDto ToDto(this TabLineItem li) =>
+        new(li.Id, li.ProductId, li.Name, li.UnitPrice, li.Quantity,
+            li.Notes, li.AddedAt);
+
+    public static TabPaymentDto ToDto(this TabPayment p) =>
+        new(p.Id, p.Method, p.Amount, p.PayerMemberId, p.Note, p.PaidAt);
+
+    public static PlayerTabDto ToDto(this PlayerTab t) =>
+        new(t.Id, t.OpenedAt, t.ClosedAt, t.Status,
+            ParseList(t.MemberIdsJson), ParseList(t.GuestsJson),
+            t.TeeTimeId,
+            t.Items.OrderBy(i => i.AddedAt).Select(i => i.ToDto()).ToList(),
+            t.Payments.OrderBy(p => p.PaidAt).Select(p => p.ToDto()).ToList(),
+            t.TipAmount, t.TaxRate, t.Notes);
+
+    public static void ApplyMeta(this PlayerTab t, PlayerTabDto d)
+    {
+        t.OpenedAt = d.OpenedAt; t.ClosedAt = d.ClosedAt;
+        t.Status = d.Status;
+        t.MemberIdsJson = SerializeList(d.MemberIds);
+        t.GuestsJson = SerializeList(d.Guests);
+        t.TeeTimeId = d.TeeTimeId;
+        t.TipAmount = d.TipAmount; t.TaxRate = d.TaxRate;
+        t.Notes = d.Notes;
+    }
+}

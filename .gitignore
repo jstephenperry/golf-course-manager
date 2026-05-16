@@ -1,10 +1,29 @@
-node_modules
-dist
-dist-ssr
+# Node / Vite
+node_modules/
+dist/
+.vite/
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Server-bundled SPA output (built from client/dist)
+server/FairwayHq.Api/wwwroot/
+
+# OS / editor
 .DS_Store
-.vite
-*.local
-*.tsbuildinfo
+*.swp
+
+# Local data
+*.db
+*.db-shm
+*.db-wal
+data/
+
+# Env
 .env
 .env.*
 !.env.example
