@@ -25,7 +25,7 @@ public static class Seed
             new Member { Id = "mbr_W7gHk9rTfL", FirstName = "Marcus", LastName = "Reed", Email = "marcus.reed@example.com", Phone = "555-0188", Tier = "Weekday", Handicap = 14.2, JoinDate = "2021-07-01", Active = true, Balance = 125.50m },
             new Member { Id = "mbr_P3xYm5dBqV", FirstName = "Sofia", LastName = "Alvarez", Email = "sofia.alvarez@example.com", Phone = "555-0114", Tier = "Full", Handicap = 3.1, JoinDate = "2015-05-22", Active = true, Balance = 0m },
             new Member { Id = "mbr_F8jRn2KwHt", FirstName = "Daniel", LastName = "O'Connell", Email = "danny.oc@example.com", Phone = "555-0199", Tier = "Corporate", Handicap = 22.6, JoinDate = "2023-01-10", Active = true, Balance = 320m },
-            new Member { Id = "mbr_C6vDp9LqXz", FirstName = "Priya", LastName = "Shah", Email = "priya.shah@example.com", Phone = "555-0167", Tier = "Social", Handicap = 0, JoinDate = "2022-09-30", Active = false, Balance = 0m }
+            new Member { Id = "mbr_C6vDp9LqXz", FirstName = "Priya", LastName = "Shah", Email = "priya.shah@example.com", Phone = "555-0167", Tier = "Social", Handicap = 0, JoinDate = "2022-09-30", Active = false, Status = "Inactive", Balance = 0m }
         );
 
         db.TeeTimes.AddRange(
