@@ -10,18 +10,6 @@ public class ApplicationsTests : IClassFixture<ApiFactory>
     public ApplicationsTests(ApiFactory factory) => _factory = factory;
 
     [Fact]
-    public async Task Seeded_applications_are_returned_pending()
-    {
-        var client = _factory.CreateClient();
-        var list = await client.GetFromJsonAsync<List<MemberApplicationDto>>("/api/applications");
-        Assert.NotNull(list);
-        // Tests share a factory/DB; assert about the seed records by id.
-        var seeded = list!.Where(a => a.Id == "app_K7nMpQjLxR" || a.Id == "app_R3vBxHfTd2").ToList();
-        Assert.Equal(2, seeded.Count);
-        Assert.All(seeded, a => Assert.Equal("Pending", a.Status));
-    }
-
-    [Fact]
     public async Task Full_application_lifecycle_creates_member_with_initiation_fee()
     {
         var client = _factory.CreateClient();

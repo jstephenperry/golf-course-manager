@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using FairwayHq.Api.Models;
+using FairwayHq.Api.Tests.Helpers;
 
 namespace FairwayHq.Api.Tests;
 
@@ -16,6 +17,7 @@ public class MemberOverviewTests : IClassFixture<ApiFactory>
     public async Task Overview_returns_profile_for_seeded_member()
     {
         var client = _factory.CreateClient();
+        await TestSeed.MinimalAsync(client);
         var overview = await client.GetFromJsonAsync<MemberOverviewDto>(
             $"/api/members/{EleanorId}/overview");
 
@@ -35,6 +37,7 @@ public class MemberOverviewTests : IClassFixture<ApiFactory>
     public async Task Overview_recent_rounds_are_sorted_newest_first()
     {
         var client = _factory.CreateClient();
+        await TestSeed.MinimalAsync(client);
         var overview = await client.GetFromJsonAsync<MemberOverviewDto>(
             $"/api/members/{EleanorId}/overview");
 
@@ -54,6 +57,7 @@ public class MemberOverviewTests : IClassFixture<ApiFactory>
     public async Task Overview_returns_zero_for_member_with_no_completed_rounds()
     {
         var client = _factory.CreateClient();
+        await TestSeed.MinimalAsync(client);
         var memberId = await CreateMember(client, "NoRounds", "Member");
 
         var overview = await client.GetFromJsonAsync<MemberOverviewDto>(
@@ -69,6 +73,7 @@ public class MemberOverviewTests : IClassFixture<ApiFactory>
     public async Task Overview_returns_404_for_unknown_member()
     {
         var client = _factory.CreateClient();
+        await TestSeed.MinimalAsync(client);
         var res = await client.GetAsync("/api/members/does_not_exist/overview");
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
     }
@@ -77,6 +82,7 @@ public class MemberOverviewTests : IClassFixture<ApiFactory>
     public async Task Overview_recent_rounds_capped_at_10_and_newest_first()
     {
         var client = _factory.CreateClient();
+        await TestSeed.MinimalAsync(client);
         var memberId = await CreateMember(client, "Cap", "Tester");
 
         // 12 completed rounds across 12 distinct past dates.
@@ -108,6 +114,7 @@ public class MemberOverviewTests : IClassFixture<ApiFactory>
     public async Task Overview_ignores_non_completed_rounds()
     {
         var client = _factory.CreateClient();
+        await TestSeed.MinimalAsync(client);
         var memberId = await CreateMember(client, "Filter", "Tester");
 
         var today = DateTime.UtcNow.Date.ToString("yyyy-MM-dd");

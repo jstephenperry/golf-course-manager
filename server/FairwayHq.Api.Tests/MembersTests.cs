@@ -10,16 +10,6 @@ public class MembersTests : IClassFixture<ApiFactory>
     public MembersTests(ApiFactory factory) => _factory = factory;
 
     [Fact]
-    public async Task Seeded_members_are_returned()
-    {
-        var client = _factory.CreateClient();
-        var list = await client.GetFromJsonAsync<List<MemberDto>>("/api/members");
-        Assert.NotNull(list);
-        Assert.True(list!.Count >= 5);
-        Assert.Contains(list, m => m.Email == "eleanor.park@example.com");
-    }
-
-    [Fact]
     public async Task Crud_member()
     {
         var client = _factory.CreateClient();

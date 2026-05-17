@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using FairwayHq.Api.Models;
+using FairwayHq.Api.Tests.Helpers;
 
 namespace FairwayHq.Api.Tests;
 
@@ -9,12 +10,17 @@ public class TabsTests : IClassFixture<ApiFactory>
     private readonly ApiFactory _factory;
     public TabsTests(ApiFactory factory) => _factory = factory;
 
-    private HttpClient ClientWithSeed() => _factory.CreateClient();
+    private async Task<HttpClient> ClientWithSeed()
+    {
+        var client = _factory.CreateClient();
+        await TestSeed.MinimalAsync(client);
+        return client;
+    }
 
     [Fact]
     public async Task Open_settle_flow_decrements_stock_and_settles_at_zero_balance()
     {
-        var client = ClientWithSeed();
+        var client = await ClientWithSeed();
 
         // Pick the iced tea product (stock 96 from seed, price 3.50)
         var products = await client.GetFromJsonAsync<List<ProductDto>>("/api/products");
@@ -78,6 +84,7 @@ public class TabsTests : IClassFixture<ApiFactory>
     public async Task Voiding_restores_stock_and_reverses_member_charges()
     {
         var client = _factory.CreateClient();
+        await TestSeed.MinimalAsync(client);
 
         var products = await client.GetFromJsonAsync<List<ProductDto>>("/api/products");
         var ball = products!.Single(p => p.Id == "prod_K2nM8wQjLp"); // Pro V1 dozen, $54.99
@@ -153,6 +160,7 @@ public class TabsTests : IClassFixture<ApiFactory>
     public async Task Cannot_modify_settled_tab()
     {
         var client = _factory.CreateClient();
+        await TestSeed.MinimalAsync(client);
 
         // Open + settle a freebie tab (no items, no balance)
         var opened = await (await client.PostAsJsonAsync("/api/tabs", new
@@ -181,6 +189,7 @@ public class TabsTests : IClassFixture<ApiFactory>
     public async Task Item_quantity_adjustment_rebalances_stock()
     {
         var client = _factory.CreateClient();
+        await TestSeed.MinimalAsync(client);
         var startingStock = (await client.GetFromJsonAsync<List<ProductDto>>("/api/products"))!
             .Single(p => p.Id == "prod_F4hLn7QxBg").Stock;
 

@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using FairwayHq.Api.Data;
 using FairwayHq.Api.Models;
 using FairwayHq.Api.Services;
+using FairwayHq.Api.Tests.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,6 +18,7 @@ public class DunningTests : IClassFixture<ApiFactory>
     public async Task Member_charge_stamps_oldest_unpaid_when_balance_was_zero()
     {
         var client = _factory.CreateClient();
+        await TestSeed.MinimalAsync(client);
 
         // Open a tab and post a Member Charge of $40 to m1 (starts at $0)
         var tab = await OpenTabFor(client, "mbr_J4nKp2vQ8x");
@@ -37,6 +39,7 @@ public class DunningTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task Dunning_run_suspends_member_past_NET60()
     {
+        await TestSeed.MinimalAsync(_factory.CreateClient());
         // Reach in via DI: stamp m1 with a 70-day-old unpaid charge, then trigger dunning.
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -49,6 +52,7 @@ public class DunningTests : IClassFixture<ApiFactory>
         await db.SaveChangesAsync();
 
         var client = _factory.CreateClient();
+        await TestSeed.MinimalAsync(client);
         var res = await client.PostAsync("/api/dunning/run", null);
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);
         var result = await res.Content.ReadFromJsonAsync<DunningRunResultDto>();
@@ -65,6 +69,7 @@ public class DunningTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task Dunning_does_not_suspend_recent_charges()
     {
+        await TestSeed.MinimalAsync(_factory.CreateClient());
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var m = await db.Members.FindAsync("mbr_P3xYm5dBqV");
@@ -75,6 +80,7 @@ public class DunningTests : IClassFixture<ApiFactory>
         await db.SaveChangesAsync();
 
         var client = _factory.CreateClient();
+        await TestSeed.MinimalAsync(client);
         await client.PostAsync("/api/dunning/run", null);
 
         var refreshed = (await client.GetFromJsonAsync<List<MemberDto>>("/api/members"))!
@@ -85,6 +91,7 @@ public class DunningTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task Paying_off_balance_auto_reinstates_a_suspended_member()
     {
+        await TestSeed.MinimalAsync(_factory.CreateClient());
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var m = await db.Members.FindAsync("mbr_F8jRn2KwHt");
@@ -96,6 +103,7 @@ public class DunningTests : IClassFixture<ApiFactory>
         await db.SaveChangesAsync();
 
         var client = _factory.CreateClient();
+        await TestSeed.MinimalAsync(client);
         // Manual reinstate via endpoint requires balance to be zeroed first.
         // We do it by posting a Card payment that doesn't touch member balance —
         // instead, simulate the member paying their account directly via the
@@ -134,6 +142,7 @@ public class DunningTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task Suspended_member_cannot_be_charged()
     {
+        await TestSeed.MinimalAsync(_factory.CreateClient());
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var m = await db.Members.FindAsync("mbr_W7gHk9rTfL");
@@ -143,6 +152,7 @@ public class DunningTests : IClassFixture<ApiFactory>
         await db.SaveChangesAsync();
 
         var client = _factory.CreateClient();
+        await TestSeed.MinimalAsync(client);
         var tab = await OpenTabFor(client, "mbr_W7gHk9rTfL");
         var chargeRes = await client.PostAsJsonAsync($"/api/tabs/{tab.Id}/payments", new
         {
@@ -163,6 +173,7 @@ public class DunningTests : IClassFixture<ApiFactory>
         // assert suspended. Defends against any future refactor that
         // makes the cached field drift from ledger ground truth.
         var client = _factory.CreateClient();
+        await TestSeed.MinimalAsync(client);
         var tab = await OpenTabFor(client, "mbr_C6vDp9LqXz");
         // Priya is Inactive in seed — bring to Active for this test.
         using (var scope = _factory.Services.CreateScope())
