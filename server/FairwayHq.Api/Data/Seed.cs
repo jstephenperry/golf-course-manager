@@ -120,6 +120,36 @@ public static class Seed
         tab.Items.Add(new TabLineItem { Id = "line_R8nMw2QqLt", TabId = "tab_M9kPn4WqLx", ProductId = "prod_K2nM8wQjLp", Name = "Pro V1 Dozen", UnitPrice = 54.99m, Quantity = 1, Notes = "Lost ball on 7", AddedAt = $"{D(0)}T09:30:00Z" });
         db.Tabs.Add(tab);
 
+        db.MemberApplications.AddRange(
+            new MemberApplication
+            {
+                Id = "app_K7nMpQjLxR",
+                FirstName = "Quinn",
+                LastName = "Harlow",
+                Email = "quinn.harlow@example.com",
+                Phone = "555-0901",
+                RequestedTier = "Full",
+                SponsoringMemberId = "mbr_P3xYm5dBqV",
+                InitiationFee = 2500m,
+                Notes = "Referred by S. Alvarez. Plays to ~10.",
+                Status = "Pending",
+                SubmittedAt = DateTime.UtcNow.AddDays(-2).ToString("o"),
+            },
+            new MemberApplication
+            {
+                Id = "app_R3vBxHfTd2",
+                FirstName = "Hana",
+                LastName = "Okafor",
+                Email = "hana.okafor@example.com",
+                Phone = "555-0922",
+                RequestedTier = "Weekday",
+                InitiationFee = 1200m,
+                Notes = "Self-applied via website form.",
+                Status = "Pending",
+                SubmittedAt = DateTime.UtcNow.AddDays(-5).ToString("o"),
+            }
+        );
+
         db.SaveChanges();
     }
 }

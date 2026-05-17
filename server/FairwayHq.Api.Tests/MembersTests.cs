@@ -34,7 +34,10 @@ public class MembersTests : IClassFixture<ApiFactory>
             Handicap: 12.3,
             JoinDate: "2024-01-01",
             Active: true,
-            Balance: 0m
+            Balance: 0m,
+            Status: "Active",
+            OldestUnpaidChargeAt: null,
+            SuspendedAt: null
         );
 
         var created = await (await client.PostAsJsonAsync("/api/members", draft))

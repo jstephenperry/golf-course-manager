@@ -13,8 +13,10 @@ import { useToaster } from "../components/Toaster";
 import type {
   Course,
   DataState,
+  DunningRunResult,
   MaintenanceTask,
   Member,
+  MemberApplication,
   PaymentMethod,
   PlayerTab,
   Product,
@@ -36,6 +38,7 @@ export const EMPTY_DATA: DataState = {
   tournaments: [],
   maintenance: [],
   tabs: [],
+  memberApplications: [],
 };
 
 type CollectionKey =
@@ -47,7 +50,8 @@ type CollectionKey =
   | "weeklyTemplates"
   | "products"
   | "tournaments"
-  | "maintenance";
+  | "maintenance"
+  | "memberApplications";
 
 interface ResourceActions<T extends { id: string }> {
   create: (dto: Omit<T, "id"> & { id?: string }) => Promise<T | null>;
@@ -95,7 +99,24 @@ interface StoreApi {
   error: string | null;
   refresh: () => Promise<void>;
 
-  members: ResourceActions<Member>;
+  members: ResourceActions<Member> & {
+    suspend: (id: string, note?: string) => Promise<Member | null>;
+    reinstate: (id: string) => Promise<Member | null>;
+  };
+  applications: ResourceActions<MemberApplication> & {
+    approve: (
+      id: string,
+      reviewer: string,
+      note: string,
+    ) => Promise<MemberApplication | null>;
+    reject: (
+      id: string,
+      reviewer: string,
+      note: string,
+    ) => Promise<MemberApplication | null>;
+    activate: (id: string) => Promise<Member | null>;
+    withdraw: (id: string) => Promise<MemberApplication | null>;
+  };
   courses: ResourceActions<Course>;
   teeTimes: ResourceActions<TeeTime>;
   staff: ResourceActions<StaffMember>;
@@ -107,6 +128,8 @@ interface StoreApi {
   tournaments: ResourceActions<Tournament>;
   maintenance: ResourceActions<MaintenanceTask>;
   tabs: TabsActions;
+
+  runDunning: () => Promise<DunningRunResult | null>;
 
   reset: () => Promise<void>;
   clear: () => Promise<void>;
@@ -161,6 +184,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         tournaments: snap.tournaments ?? [],
         maintenance: snap.maintenance ?? [],
         tabs: snap.tabs ?? [],
+        memberApplications: snap.memberApplications ?? [],
       });
       setError(null);
       setInitialized(true);
@@ -279,9 +303,94 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [upsert, removeFrom, handleError],
   );
 
-  const members = useMemo(
+  const membersBase = useMemo(
     () => makeResource<Member, "members">("members", api.members, "member"),
     [makeResource],
+  );
+  const members = useMemo(
+    () => ({
+      ...membersBase,
+      suspend: async (id: string, note?: string) => {
+        try {
+          const m = await api.members.suspend(id, note);
+          upsert("members", m);
+          toaster.push({ kind: "success", message: "Member suspended" });
+          return m;
+        } catch (e) {
+          return handleError("Suspend member", e);
+        }
+      },
+      reinstate: async (id: string) => {
+        try {
+          const m = await api.members.reinstate(id);
+          upsert("members", m);
+          toaster.push({ kind: "success", message: "Member reinstated" });
+          return m;
+        } catch (e) {
+          return handleError("Reinstate member", e);
+        }
+      },
+    }),
+    [membersBase, upsert, toaster, handleError],
+  );
+
+  const applicationsBase = useMemo(
+    () =>
+      makeResource<MemberApplication, "memberApplications">(
+        "memberApplications",
+        api.applications,
+        "application",
+      ),
+    [makeResource],
+  );
+  const applications = useMemo(
+    () => ({
+      ...applicationsBase,
+      approve: async (id: string, reviewer: string, note: string) => {
+        try {
+          const a = await api.applications.approve(id, reviewer, note);
+          upsert("memberApplications", a);
+          toaster.push({ kind: "success", message: "Application approved" });
+          return a;
+        } catch (e) {
+          return handleError("Approve application", e);
+        }
+      },
+      reject: async (id: string, reviewer: string, note: string) => {
+        try {
+          const a = await api.applications.reject(id, reviewer, note);
+          upsert("memberApplications", a);
+          toaster.push({ kind: "success", message: "Application rejected" });
+          return a;
+        } catch (e) {
+          return handleError("Reject application", e);
+        }
+      },
+      activate: async (id: string) => {
+        try {
+          const result = await api.applications.activate(id);
+          upsert("memberApplications", result.application);
+          upsert("members", result.member);
+          toaster.push({
+            kind: "success",
+            message: `Activated ${result.member.firstName} ${result.member.lastName}`,
+          });
+          return result.member;
+        } catch (e) {
+          return handleError("Activate application", e);
+        }
+      },
+      withdraw: async (id: string) => {
+        try {
+          const a = await api.applications.withdraw(id);
+          upsert("memberApplications", a);
+          return a;
+        } catch (e) {
+          return handleError("Withdraw application", e);
+        }
+      },
+    }),
+    [applicationsBase, upsert, toaster, handleError],
   );
   const courses = useMemo(
     () => makeResource<Course, "courses">("courses", api.courses, "course"),
@@ -503,6 +612,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [toaster, handleError]);
 
+  const runDunning = useCallback(async () => {
+    try {
+      const result = await api.dunning.run();
+      // Affected members' status may have changed — refresh members.
+      await refreshMembers();
+      const note =
+        result.suspended === 0 && result.reinstated === 0
+          ? "No status changes"
+          : `Suspended ${result.suspended}, reinstated ${result.reinstated}`;
+      toaster.push({ kind: "success", message: `Dunning sweep: ${note}` });
+      return result;
+    } catch (e) {
+      return handleError("Run dunning", e);
+    }
+  }, [refreshMembers, toaster, handleError]);
+
   const exportSnapshot = useCallback(async () => {
     try {
       return await api.snapshot();
@@ -534,6 +659,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       error,
       refresh,
       members,
+      applications,
       courses,
       teeTimes,
       staff,
@@ -543,6 +669,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       tournaments,
       maintenance,
       tabs,
+      runDunning,
       reset,
       clear,
       exportSnapshot,
@@ -555,6 +682,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       error,
       refresh,
       members,
+      applications,
       courses,
       teeTimes,
       staff,
@@ -564,6 +692,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       tournaments,
       maintenance,
       tabs,
+      runDunning,
       reset,
       clear,
       exportSnapshot,

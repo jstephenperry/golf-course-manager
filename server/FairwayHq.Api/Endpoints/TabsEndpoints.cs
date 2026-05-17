@@ -1,5 +1,6 @@
 using FairwayHq.Api.Data;
 using FairwayHq.Api.Models;
+using FairwayHq.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace FairwayHq.Api.Endpoints;
@@ -71,7 +72,7 @@ public static class TabsEndpoints
                 var m = await db.Members.FindAsync(pay.PayerMemberId!);
                 if (m is not null)
                 {
-                    m.Balance = Math.Max(0m, m.Balance - pay.Amount);
+                    MemberAccountService.CreditMember(m, pay.Amount);
                 }
             }
             entity.Status = "Voided";
@@ -220,7 +221,11 @@ public static class TabsEndpoints
                     return Results.BadRequest(new { error = "payer_required" });
                 var m = await db.Members.FindAsync(body.PayerMemberId);
                 if (m is null) return Results.BadRequest(new { error = "unknown_member" });
-                m.Balance += body.Amount;
+                if (m.Status == "Suspended")
+                    return Results.BadRequest(new { error = "member_suspended", memberId = m.Id });
+                if (m.Status == "Inactive")
+                    return Results.BadRequest(new { error = "member_inactive", memberId = m.Id });
+                MemberAccountService.ChargeMember(m, body.Amount, DateTime.UtcNow);
             }
             var payment = new TabPayment
             {
@@ -255,7 +260,7 @@ public static class TabsEndpoints
             {
                 var m = await db.Members.FindAsync(pay.PayerMemberId);
                 if (m is not null)
-                    m.Balance = Math.Max(0m, m.Balance - pay.Amount);
+                    MemberAccountService.CreditMember(m, pay.Amount);
             }
             db.TabPayments.Remove(pay);
             await db.SaveChangesAsync();

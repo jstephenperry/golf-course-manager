@@ -1,0 +1,89 @@
+using System.Net;
+using System.Net.Http.Json;
+using FairwayHq.Api.Models;
+
+namespace FairwayHq.Api.Tests;
+
+public class ApplicationsTests : IClassFixture<ApiFactory>
+{
+    private readonly ApiFactory _factory;
+    public ApplicationsTests(ApiFactory factory) => _factory = factory;
+
+    [Fact]
+    public async Task Seeded_applications_are_returned_pending()
+    {
+        var client = _factory.CreateClient();
+        var list = await client.GetFromJsonAsync<List<MemberApplicationDto>>("/api/applications");
+        Assert.NotNull(list);
+        // Tests share a factory/DB; assert about the seed records by id.
+        var seeded = list!.Where(a => a.Id == "app_K7nMpQjLxR" || a.Id == "app_R3vBxHfTd2").ToList();
+        Assert.Equal(2, seeded.Count);
+        Assert.All(seeded, a => Assert.Equal("Pending", a.Status));
+    }
+
+    [Fact]
+    public async Task Full_application_lifecycle_creates_member_with_initiation_fee()
+    {
+        var client = _factory.CreateClient();
+
+        // 1. Submit
+        var submitted = await (await client.PostAsJsonAsync("/api/applications", new
+        {
+            firstName = "Casey",
+            lastName = "Lin",
+            email = "casey.lin@example.com",
+            phone = "555-1212",
+            requestedTier = "Weekday",
+            initiationFee = 750m,
+            notes = ""
+        })).Content.ReadFromJsonAsync<MemberApplicationDto>();
+        Assert.Equal("Pending", submitted!.Status);
+
+        // 2. Approve
+        var approved = await (await client.PostAsJsonAsync(
+            $"/api/applications/{submitted.Id}/approve",
+            new { reviewer = "tester", note = "ok" }
+        )).Content.ReadFromJsonAsync<MemberApplicationDto>();
+        Assert.Equal("Approved", approved!.Status);
+        Assert.Equal("tester", approved.ReviewedBy);
+
+        // 3. Activate — creates the member
+        var activated = await (await client.PostAsync(
+            $"/api/applications/{submitted.Id}/activate", null
+        )).Content.ReadFromJsonAsync<ActivationResult>();
+        Assert.Equal("Activated", activated!.Application.Status);
+        Assert.False(string.IsNullOrEmpty(activated.Member.Id));
+        Assert.Equal(activated.Member.Id, activated.Application.ActivatedMemberId);
+        Assert.Equal("Active", activated.Member.Status);
+        Assert.Equal(750m, activated.Member.Balance);
+        Assert.False(string.IsNullOrEmpty(activated.Member.OldestUnpaidChargeAt),
+            "Initiation fee should start the NET-X aging clock");
+
+        // Member is now reachable via /api/members
+        var members = await client.GetFromJsonAsync<List<MemberDto>>("/api/members");
+        Assert.Contains(members!, m => m.Id == activated.Member.Id);
+    }
+
+    [Fact]
+    public async Task Reject_then_activate_is_forbidden()
+    {
+        var client = _factory.CreateClient();
+        var submitted = await (await client.PostAsJsonAsync("/api/applications", new
+        {
+            firstName = "Reject",
+            lastName = "Me",
+            email = "x@example.com",
+            phone = "",
+            requestedTier = "Full",
+            initiationFee = 0m,
+            notes = ""
+        })).Content.ReadFromJsonAsync<MemberApplicationDto>();
+
+        await client.PostAsJsonAsync($"/api/applications/{submitted!.Id}/reject", new { reviewer = "t", note = "no" });
+
+        var actRes = await client.PostAsync($"/api/applications/{submitted.Id}/activate", null);
+        Assert.Equal(HttpStatusCode.BadRequest, actRes.StatusCode);
+    }
+
+    private record ActivationResult(MemberApplicationDto Application, MemberDto Member);
+}

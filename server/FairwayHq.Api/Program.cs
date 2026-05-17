@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using FairwayHq.Api.Data;
 using FairwayHq.Api.Endpoints;
+using FairwayHq.Api.Services;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,6 +24,11 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.Configure<DunningOptions>(
+    builder.Configuration.GetSection(DunningOptions.Section));
+builder.Services.AddSingleton<DunningService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<DunningService>());
 
 const string DevCors = "DevCors";
 builder.Services.AddCors(o =>
@@ -67,6 +73,7 @@ app.UseStaticFiles();
 // ---------- Routes ----------
 app.MapAll();
 app.MapTabs();
+app.MapMembership();
 app.MapOps();
 
 // SPA fallback for non-/api paths: serve index.html

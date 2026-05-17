@@ -12,7 +12,19 @@ export function Dashboard() {
     .filter((t) => t.date === today && t.status !== "Cancelled")
     .sort((a, b) => a.time.localeCompare(b.time));
 
-  const activeMembers = data.members.filter((m) => m.active).length;
+  const activeMembers = data.members.filter((m) => m.status === "Active").length;
+  const suspendedMembers = data.members.filter(
+    (m) => m.status === "Suspended",
+  );
+  const pastDueMembers = data.members.filter(
+    (m) => m.oldestUnpaidChargeAt && m.status !== "Suspended",
+  );
+  const pendingApplications = data.memberApplications.filter(
+    (a) => a.status === "Pending",
+  );
+  const approvedApplications = data.memberApplications.filter(
+    (a) => a.status === "Approved",
+  );
   const openMaintenance = data.maintenance.filter(
     (m) => m.status !== "Completed",
   ).length;
@@ -80,6 +92,148 @@ export function Dashboard() {
           <span className="delta">
             outstanding {formatMoney(openTabsBalance)}
           </span>
+        </div>
+      </div>
+
+      <div className="grid cols-3">
+        <div className="card">
+          <div className="row between" style={{ marginBottom: 8 }}>
+            <h2 style={{ margin: 0 }}>Membership Applications</h2>
+            <Link to="/members" className="btn sm secondary">
+              Review
+            </Link>
+          </div>
+          {pendingApplications.length + approvedApplications.length === 0 ? (
+            <div className="empty">No applications in flight.</div>
+          ) : (
+            <>
+              <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+                <span className="pill gold">
+                  {pendingApplications.length} pending
+                </span>
+                <span className="pill green">
+                  {approvedApplications.length} approved
+                </span>
+              </div>
+              <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+                {[...pendingApplications, ...approvedApplications]
+                  .slice(0, 4)
+                  .map((a) => (
+                    <li
+                      key={a.id}
+                      style={{
+                        padding: "6px 0",
+                        borderBottom: "1px solid var(--border)",
+                        fontSize: 13,
+                      }}
+                    >
+                      <strong>
+                        {a.firstName} {a.lastName}
+                      </strong>{" "}
+                      <span className="muted">· {a.requestedTier}</span>{" "}
+                      <span className="pill">{a.status}</span>
+                    </li>
+                  ))}
+              </ul>
+            </>
+          )}
+        </div>
+
+        <div className="card">
+          <div className="row between" style={{ marginBottom: 8 }}>
+            <h2 style={{ margin: 0 }}>Suspended Members</h2>
+            <Link to="/members" className="btn sm secondary">
+              View
+            </Link>
+          </div>
+          {suspendedMembers.length === 0 ? (
+            <div className="empty">None currently suspended.</div>
+          ) : (
+            <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+              {suspendedMembers.slice(0, 5).map((m) => (
+                <li
+                  key={m.id}
+                  style={{
+                    padding: "6px 0",
+                    borderBottom: "1px solid var(--border)",
+                    fontSize: 13,
+                  }}
+                >
+                  <div className="row between">
+                    <span>
+                      <strong>
+                        {m.firstName} {m.lastName}
+                      </strong>{" "}
+                      <span className="muted">{m.tier}</span>
+                    </span>
+                    <span className="pill red">{formatMoney(m.balance)}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="card">
+          <div className="row between" style={{ marginBottom: 8 }}>
+            <h2 style={{ margin: 0 }}>Past-Due Watch</h2>
+            <Link to="/members" className="btn sm secondary">
+              Members
+            </Link>
+          </div>
+          {pastDueMembers.length === 0 ? (
+            <div className="empty">No active members carrying a balance.</div>
+          ) : (
+            <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+              {pastDueMembers
+                .slice()
+                .sort((a, b) =>
+                  (a.oldestUnpaidChargeAt ?? "").localeCompare(
+                    b.oldestUnpaidChargeAt ?? "",
+                  ),
+                )
+                .slice(0, 5)
+                .map((m) => {
+                  const ageDays = m.oldestUnpaidChargeAt
+                    ? Math.floor(
+                        (Date.now() -
+                          new Date(m.oldestUnpaidChargeAt).getTime()) /
+                          (1000 * 60 * 60 * 24),
+                      )
+                    : 0;
+                  return (
+                    <li
+                      key={m.id}
+                      style={{
+                        padding: "6px 0",
+                        borderBottom: "1px solid var(--border)",
+                        fontSize: 13,
+                      }}
+                    >
+                      <div className="row between">
+                        <span>
+                          <strong>
+                            {m.firstName} {m.lastName}
+                          </strong>{" "}
+                          <span className="muted">{formatMoney(m.balance)}</span>
+                        </span>
+                        <span
+                          className={`pill ${
+                            ageDays >= 60
+                              ? "red"
+                              : ageDays >= 30
+                                ? "gold"
+                                : "gray"
+                          }`}
+                        >
+                          {ageDays}d
+                        </span>
+                      </div>
+                    </li>
+                  );
+                })}
+            </ul>
+          )}
         </div>
       </div>
 

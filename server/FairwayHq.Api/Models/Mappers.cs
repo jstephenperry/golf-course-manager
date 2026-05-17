@@ -18,14 +18,45 @@ public static class Mappers
 
     public static MemberDto ToDto(this Member m) =>
         new(m.Id, m.FirstName, m.LastName, m.Email, m.Phone, m.Tier,
-            m.Handicap, m.JoinDate, m.Active, m.Balance);
+            m.Handicap, m.JoinDate, m.Active, m.Balance,
+            string.IsNullOrEmpty(m.Status) ? (m.Active ? "Active" : "Inactive") : m.Status,
+            m.OldestUnpaidChargeAt, m.SuspendedAt);
 
     public static void Apply(this Member m, MemberDto d)
     {
         m.FirstName = d.FirstName; m.LastName = d.LastName;
         m.Email = d.Email; m.Phone = d.Phone; m.Tier = d.Tier;
         m.Handicap = d.Handicap; m.JoinDate = d.JoinDate;
-        m.Active = d.Active; m.Balance = d.Balance;
+        // Prefer status from the DTO; fall back to legacy Active.
+        var status = string.IsNullOrEmpty(d.Status)
+            ? (d.Active ? "Active" : "Inactive")
+            : d.Status;
+        m.Status = status;
+        m.Active = status == "Active";
+        m.Balance = d.Balance;
+        m.OldestUnpaidChargeAt = d.OldestUnpaidChargeAt;
+        m.SuspendedAt = d.SuspendedAt;
+    }
+
+    public static MemberApplicationDto ToDto(this MemberApplication a) =>
+        new(a.Id, a.FirstName, a.LastName, a.Email, a.Phone, a.RequestedTier,
+            a.SponsoringMemberId, a.InitiationFee, a.Notes, a.Status,
+            a.SubmittedAt, a.ReviewedAt, a.ReviewedBy, a.ReviewNote, a.ActivatedMemberId);
+
+    public static void Apply(this MemberApplication a, MemberApplicationDto d)
+    {
+        a.FirstName = d.FirstName; a.LastName = d.LastName;
+        a.Email = d.Email; a.Phone = d.Phone;
+        a.RequestedTier = d.RequestedTier;
+        a.SponsoringMemberId = d.SponsoringMemberId;
+        a.InitiationFee = d.InitiationFee;
+        a.Notes = d.Notes;
+        // Status / lifecycle fields are managed by dedicated endpoints,
+        // not by raw PUT; we still preserve them here for restore use.
+        if (!string.IsNullOrEmpty(d.Status)) a.Status = d.Status;
+        if (!string.IsNullOrEmpty(d.SubmittedAt)) a.SubmittedAt = d.SubmittedAt;
+        a.ReviewedAt = d.ReviewedAt; a.ReviewedBy = d.ReviewedBy;
+        a.ReviewNote = d.ReviewNote; a.ActivatedMemberId = d.ActivatedMemberId;
     }
 
     public static CourseDto ToDto(this Course c) =>

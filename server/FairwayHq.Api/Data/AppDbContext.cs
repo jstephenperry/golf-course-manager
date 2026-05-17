@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<PlayerTab> Tabs => Set<PlayerTab>();
     public DbSet<TabLineItem> TabLineItems => Set<TabLineItem>();
     public DbSet<TabPayment> TabPayments => Set<TabPayment>();
+    public DbSet<MemberApplication> MemberApplications => Set<MemberApplication>();
 
     protected override void OnModelCreating(ModelBuilder mb)
     {

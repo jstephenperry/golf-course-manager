@@ -35,6 +35,7 @@ public static class OpsEndpoints
             db.Staff.RemoveRange(db.Staff);
             db.TeeTimes.RemoveRange(db.TeeTimes);
             db.Courses.RemoveRange(db.Courses);
+            db.MemberApplications.RemoveRange(db.MemberApplications);
             db.Members.RemoveRange(db.Members);
             await db.SaveChangesAsync();
 
@@ -42,6 +43,11 @@ public static class OpsEndpoints
             {
                 var e = new Member { Id = d.Id };
                 e.Apply(d); db.Members.Add(e);
+            }
+            foreach (var d in body.MemberApplications)
+            {
+                var e = new MemberApplication { Id = d.Id };
+                e.Apply(d); db.MemberApplications.Add(e);
             }
             foreach (var d in body.Courses)
             {
@@ -116,38 +122,14 @@ public static class OpsEndpoints
         app.MapPost("/api/reset", async (AppDbContext db) =>
         {
             // Wipe + reseed
-            db.TabLineItems.RemoveRange(db.TabLineItems);
-            db.TabPayments.RemoveRange(db.TabPayments);
-            db.Tabs.RemoveRange(db.Tabs);
-            db.Maintenance.RemoveRange(db.Maintenance);
-            db.Tournaments.RemoveRange(db.Tournaments);
-            db.Products.RemoveRange(db.Products);
-            db.WeeklyTemplates.RemoveRange(db.WeeklyTemplates);
-            db.Shifts.RemoveRange(db.Shifts);
-            db.Staff.RemoveRange(db.Staff);
-            db.TeeTimes.RemoveRange(db.TeeTimes);
-            db.Courses.RemoveRange(db.Courses);
-            db.Members.RemoveRange(db.Members);
-            await db.SaveChangesAsync();
+            await ClearAll(db);
             Seed.EnsureSeeded(db);
             return Results.Ok(new { reset = true });
         }).WithTags("Ops");
 
         app.MapPost("/api/clear", async (AppDbContext db) =>
         {
-            db.TabLineItems.RemoveRange(db.TabLineItems);
-            db.TabPayments.RemoveRange(db.TabPayments);
-            db.Tabs.RemoveRange(db.Tabs);
-            db.Maintenance.RemoveRange(db.Maintenance);
-            db.Tournaments.RemoveRange(db.Tournaments);
-            db.Products.RemoveRange(db.Products);
-            db.WeeklyTemplates.RemoveRange(db.WeeklyTemplates);
-            db.Shifts.RemoveRange(db.Shifts);
-            db.Staff.RemoveRange(db.Staff);
-            db.TeeTimes.RemoveRange(db.TeeTimes);
-            db.Courses.RemoveRange(db.Courses);
-            db.Members.RemoveRange(db.Members);
-            await db.SaveChangesAsync();
+            await ClearAll(db);
             return Results.Ok(new { cleared = true });
         }).WithTags("Ops");
     }
@@ -166,7 +148,26 @@ public static class OpsEndpoints
             (await db.Products.AsNoTracking().ToListAsync()).Select(p => p.ToDto()).ToList(),
             (await db.Tournaments.AsNoTracking().ToListAsync()).Select(t => t.ToDto()).ToList(),
             (await db.Maintenance.AsNoTracking().ToListAsync()).Select(m => m.ToDto()).ToList(),
-            tabs.Select(t => t.ToDto()).ToList()
+            tabs.Select(t => t.ToDto()).ToList(),
+            (await db.MemberApplications.AsNoTracking().ToListAsync()).Select(a => a.ToDto()).ToList()
         );
+    }
+
+    private static async Task ClearAll(AppDbContext db)
+    {
+        db.TabLineItems.RemoveRange(db.TabLineItems);
+        db.TabPayments.RemoveRange(db.TabPayments);
+        db.Tabs.RemoveRange(db.Tabs);
+        db.Maintenance.RemoveRange(db.Maintenance);
+        db.Tournaments.RemoveRange(db.Tournaments);
+        db.Products.RemoveRange(db.Products);
+        db.WeeklyTemplates.RemoveRange(db.WeeklyTemplates);
+        db.Shifts.RemoveRange(db.Shifts);
+        db.Staff.RemoveRange(db.Staff);
+        db.TeeTimes.RemoveRange(db.TeeTimes);
+        db.Courses.RemoveRange(db.Courses);
+        db.MemberApplications.RemoveRange(db.MemberApplications);
+        db.Members.RemoveRange(db.Members);
+        await db.SaveChangesAsync();
     }
 }

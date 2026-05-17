@@ -66,6 +66,9 @@ describe("api client", () => {
       joinDate: "2024-01-01",
       active: true,
       balance: 0,
+      status: "Active",
+      oldestUnpaidChargeAt: null,
+      suspendedAt: null,
     });
     const call = fetchMock.mock.calls[0]!;
     expect(call[0]).toBe("/api/members");

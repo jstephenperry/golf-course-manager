@@ -1,5 +1,7 @@
 export type MembershipTier = "Social" | "Weekday" | "Full" | "Corporate";
 
+export type MemberStatus = "Active" | "Suspended" | "Inactive";
+
 export interface Member {
   id: string;
   firstName: string;
@@ -11,6 +13,40 @@ export interface Member {
   joinDate: string;
   active: boolean;
   balance: number;
+  status: MemberStatus;
+  oldestUnpaidChargeAt: string | null;
+  suspendedAt: string | null;
+}
+
+export type ApplicationStatus =
+  | "Pending"
+  | "Approved"
+  | "Rejected"
+  | "Activated"
+  | "Withdrawn";
+
+export interface MemberApplication {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  requestedTier: MembershipTier;
+  sponsoringMemberId: string | null;
+  initiationFee: number;
+  notes: string;
+  status: ApplicationStatus;
+  submittedAt: string;
+  reviewedAt: string | null;
+  reviewedBy: string | null;
+  reviewNote: string | null;
+  activatedMemberId: string | null;
+}
+
+export interface DunningRunResult {
+  suspended: number;
+  reinstated: number;
+  affectedMemberIds: string[];
 }
 
 export interface Course {
@@ -180,4 +216,5 @@ export interface DataState {
   tournaments: Tournament[];
   maintenance: MaintenanceTask[];
   tabs: PlayerTab[];
+  memberApplications: MemberApplication[];
 }

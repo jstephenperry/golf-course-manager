@@ -13,8 +13,33 @@ public record MemberDto(
     double Handicap,
     string JoinDate,
     bool Active,
-    decimal Balance
+    decimal Balance,
+    string Status,
+    string? OldestUnpaidChargeAt,
+    string? SuspendedAt
 );
+
+public record MemberApplicationDto(
+    string Id,
+    string FirstName,
+    string LastName,
+    string Email,
+    string Phone,
+    string RequestedTier,
+    string? SponsoringMemberId,
+    decimal InitiationFee,
+    string Notes,
+    string Status,
+    string SubmittedAt,
+    string? ReviewedAt,
+    string? ReviewedBy,
+    string? ReviewNote,
+    string? ActivatedMemberId
+);
+
+public record ApplicationReviewDto(string? Reviewer, string? Note);
+
+public record DunningRunResultDto(int Suspended, int Reinstated, string[] AffectedMemberIds);
 
 public record CourseDto(
     string Id,
@@ -150,7 +175,8 @@ public record DataSnapshot(
     List<ProductDto> Products,
     List<TournamentDto> Tournaments,
     List<MaintenanceTaskDto> Maintenance,
-    List<PlayerTabDto> Tabs
+    List<PlayerTabDto> Tabs,
+    List<MemberApplicationDto> MemberApplications
 );
 
 // Body for tab payment posting (auto-stamped PaidAt server-side).

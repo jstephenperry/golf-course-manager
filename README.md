@@ -63,6 +63,11 @@ All endpoints under `/api`. Swagger UI at `/swagger` in development.
 | GET    | `/api/health` | Liveness |
 | CRUD   | `/api/members`, `/api/courses`, `/api/tee-times`, `/api/staff`, `/api/shifts`, `/api/weekly-templates`, `/api/products`, `/api/tournaments`, `/api/maintenance` | Standard list / create / update / delete |
 | POST   | `/api/products/{id}/adjust-stock` | Atomic stock delta |
+| POST   | `/api/members/{id}/suspend`, `/api/members/{id}/reinstate` | Manual account status overrides |
+| CRUD   | `/api/applications` | Membership applications (Pending → Approved → Activated, or Rejected / Withdrawn) |
+| POST   | `/api/applications/{id}/approve`, `/api/applications/{id}/reject`, `/api/applications/{id}/withdraw` | Review actions |
+| POST   | `/api/applications/{id}/activate` | Creates the Member, posts the initiation fee, returns both |
+| POST   | `/api/dunning/run` | Trigger the NET-X sweep immediately (also runs every 30 min in the background) |
 | CRUD   | `/api/tabs`, `/api/tabs/{id}` | List, create, update meta |
 | POST   | `/api/tabs/{id}/items`, `PUT /api/tabs/{id}/items/{itemId}/quantity`, `DELETE /api/tabs/{id}/items/{itemId}` | Tab line items — server snapshots product price + adjusts stock transactionally |
 | POST   | `/api/tabs/{id}/payments`, `DELETE /api/tabs/{id}/payments/{paymentId}` | Payments — Member Charge posts to member balance; reversed on delete or void |
@@ -100,13 +105,32 @@ and snapshot/restore round-trip.
 | ------------- | ------------------------------------------------------------------ |
 | Dashboard     | Today's tee sheet, on-duty crew, restock alerts, open-tab balance. |
 | Tee Times     | 15-minute slot grid per course; book, check in, complete, open tab. |
-| Members       | Roster, tiers, handicap, balance, contact info.                    |
+| Members       | Roster + Applications tabs. Tracks status (Active / Suspended / Inactive), balance aging, suspended-since dates. Suspend / reinstate inline. New applications flow Pending → Approved → Activated (auto-creates member + posts initiation fee). |
 | Courses       | Course details, rating/slope, operating hours, status.             |
 | Staff         | Roster, weekly schedule grid, department coverage, recurring weekly templates. |
 | Pro Shop      | Inventory by category, atomic stock adjustments, low-stock alerts. |
 | Player Tabs   | Open per-group tabs, add inventory items (server-side stock decrement), accept Cash / Card / Member Charge / Comp, settle at zero balance, void with full rollback. |
 | Tournaments   | Schedule events, manage registrations, format & entry fee.         |
 | Maintenance   | Task list with priority, assignment, due date, and status workflow.|
+
+## Membership & dunning
+
+- A `MemberApplication` row goes Pending → Approved → Activated (or Rejected /
+  Withdrawn). Activating creates the `Member` and rolls the initiation fee
+  onto the new account (which starts the NET-X clock immediately).
+- Every member-charge payment stamps `OldestUnpaidChargeAt` if the balance
+  went from zero to positive. Any payment that returns the balance to zero
+  clears the timestamp and automatically reinstates a previously
+  auto-suspended member.
+- A background `DunningService` runs every `Dunning:RunIntervalMinutes`
+  (default 30) and any time you POST `/api/dunning/run`. It transitions
+  Active members whose oldest unpaid charge is older than
+  `Dunning:PastDueDays` (default 60) to `Suspended` and stamps `SuspendedAt`.
+- Suspended members are rejected by `POST /api/tabs/{id}/payments` with
+  `method=Member Charge` (HTTP 400, `error="member_suspended"`), so cart
+  staff can't accidentally let a delinquent account keep charging.
+- Tunables live under the `Dunning` section in `appsettings.json` and can
+  be overridden via env (`Dunning__PastDueDays=30`).
 
 ## Data lifecycle
 

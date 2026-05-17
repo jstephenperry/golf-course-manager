@@ -1,8 +1,10 @@
 import type {
   Course,
   DataState,
+  DunningRunResult,
   MaintenanceTask,
   Member,
+  MemberApplication,
   PaymentMethod,
   PlayerTab,
   Product,
@@ -87,7 +89,36 @@ const resource = <T extends { id: string }>(path: string) => ({
 export const api = {
   health: () => request<{ status: string; time: string }>("GET", "/health"),
 
-  members: resource<Member>("/members"),
+  members: {
+    ...resource<Member>("/members"),
+    suspend: (id: string, note?: string) =>
+      request<Member>("POST", `/members/${id}/suspend`, { reviewer: null, note: note ?? "" }),
+    reinstate: (id: string) =>
+      request<Member>("POST", `/members/${id}/reinstate`),
+  },
+  applications: {
+    ...resource<MemberApplication>("/applications"),
+    approve: (id: string, reviewer: string, note: string) =>
+      request<MemberApplication>("POST", `/applications/${id}/approve`, {
+        reviewer,
+        note,
+      }),
+    reject: (id: string, reviewer: string, note: string) =>
+      request<MemberApplication>("POST", `/applications/${id}/reject`, {
+        reviewer,
+        note,
+      }),
+    activate: (id: string) =>
+      request<{ application: MemberApplication; member: Member }>(
+        "POST",
+        `/applications/${id}/activate`,
+      ),
+    withdraw: (id: string) =>
+      request<MemberApplication>("POST", `/applications/${id}/withdraw`),
+  },
+  dunning: {
+    run: () => request<DunningRunResult>("POST", "/dunning/run"),
+  },
   courses: resource<Course>("/courses"),
   teeTimes: resource<TeeTime>("/tee-times"),
   staff: resource<StaffMember>("/staff"),
