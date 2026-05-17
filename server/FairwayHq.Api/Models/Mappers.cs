@@ -20,7 +20,7 @@ public static class Mappers
         new(m.Id, m.FirstName, m.LastName, m.Email, m.Phone, m.Tier,
             m.Handicap, m.JoinDate, m.Active, m.Balance,
             string.IsNullOrEmpty(m.Status) ? (m.Active ? "Active" : "Inactive") : m.Status,
-            m.OldestUnpaidChargeAt, m.SuspendedAt);
+            m.OldestUnpaidChargeAt, m.SuspendedAt, m.Notes);
 
     public static void Apply(this Member m, MemberDto d)
     {
@@ -36,6 +36,7 @@ public static class Mappers
         m.Balance = d.Balance;
         m.OldestUnpaidChargeAt = d.OldestUnpaidChargeAt;
         m.SuspendedAt = d.SuspendedAt;
+        m.Notes = d.Notes ?? string.Empty;
     }
 
     public static MemberApplicationDto ToDto(this MemberApplication a) =>

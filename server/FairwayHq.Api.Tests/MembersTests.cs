@@ -37,7 +37,8 @@ public class MembersTests : IClassFixture<ApiFactory>
             Balance: 0m,
             Status: "Active",
             OldestUnpaidChargeAt: null,
-            SuspendedAt: null
+            SuspendedAt: null,
+            Notes: "Initial CRM note"
         );
 
         var created = await (await client.PostAsJsonAsync("/api/members", draft))
@@ -45,12 +46,21 @@ public class MembersTests : IClassFixture<ApiFactory>
         Assert.NotNull(created);
         Assert.False(string.IsNullOrEmpty(created!.Id));
         Assert.Equal("Test", created.FirstName);
+        Assert.Equal("Initial CRM note", created.Notes);
 
-        var updated = created with { Handicap = 9.9 };
+        var updated = created with { Handicap = 9.9, Notes = "Updated note — walks only" };
         var resUpd = await client.PutAsJsonAsync($"/api/members/{created.Id}", updated);
         Assert.Equal(HttpStatusCode.OK, resUpd.StatusCode);
         var after = await resUpd.Content.ReadFromJsonAsync<MemberDto>();
         Assert.Equal(9.9, after!.Handicap, 3);
+        Assert.Equal("Updated note — walks only", after.Notes);
+
+        // Null Notes from a (pre-v1) client should be coerced to empty, not crash.
+        var nullNotes = after with { Notes = null };
+        var resNull = await client.PutAsJsonAsync($"/api/members/{created.Id}", nullNotes);
+        Assert.Equal(HttpStatusCode.OK, resNull.StatusCode);
+        var afterNull = await resNull.Content.ReadFromJsonAsync<MemberDto>();
+        Assert.Equal(string.Empty, afterNull!.Notes);
 
         var del = await client.DeleteAsync($"/api/members/{created.Id}");
         Assert.Equal(HttpStatusCode.NoContent, del.StatusCode);

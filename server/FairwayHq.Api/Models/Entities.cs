@@ -28,6 +28,9 @@ public class Member
 
     // Set when the dunning service auto-suspends. Cleared on reinstate.
     public string? SuspendedAt { get; set; }
+
+    // Freeform staff CRM notes ("walks only", "prefers early tee times", etc.).
+    public string Notes { get; set; } = string.Empty;
 }
 
 public class Course

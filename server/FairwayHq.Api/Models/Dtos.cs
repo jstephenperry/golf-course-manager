@@ -16,7 +16,9 @@ public record MemberDto(
     decimal Balance,
     string Status,
     string? OldestUnpaidChargeAt,
-    string? SuspendedAt
+    string? SuspendedAt,
+    // Nullable so pre-v1 backup snapshots restore cleanly; Apply() coerces null → "".
+    string? Notes
 );
 
 public record MemberApplicationDto(
@@ -38,6 +40,16 @@ public record MemberApplicationDto(
 );
 
 public record ApplicationReviewDto(string? Reviewer, string? Note);
+
+// Aggregated view for the member detail / CRM page. Only Completed tee times
+// contribute to LifetimeRounds and LastPlayedDate; RecentRounds is also
+// restricted to Completed so the table reads as a true playing history.
+public record MemberOverviewDto(
+    MemberDto Member,
+    string? LastPlayedDate,
+    int LifetimeRounds,
+    List<TeeTimeDto> RecentRounds
+);
 
 public record DunningRunResultDto(int Suspended, int Reinstated, string[] AffectedMemberIds);
 
