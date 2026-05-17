@@ -62,6 +62,18 @@ public class ApplicationsTests : IClassFixture<ApiFactory>
         // Member is now reachable via /api/members
         var members = await client.GetFromJsonAsync<List<MemberDto>>("/api/members");
         Assert.Contains(members!, m => m.Id == activated.Member.Id);
+
+        // The initiation fee posted a ledger entry tagged with the application id.
+        using var db = _factory.CreateDbContext();
+        var ledger = db.MemberLedgerEntries
+            .Where(e => e.MemberId == activated.Member.Id)
+            .ToList();
+        var initiationEntry = Assert.Single(ledger);
+        Assert.Equal("Charge", initiationEntry.EntryType);
+        Assert.Equal("Initiation", initiationEntry.Category);
+        Assert.Equal(750m, initiationEntry.Amount);
+        Assert.Equal("Application", initiationEntry.SourceKind);
+        Assert.Equal(submitted.Id, initiationEntry.SourceId);
     }
 
     [Fact]

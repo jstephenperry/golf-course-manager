@@ -130,6 +130,23 @@ public class TabsTests : IClassFixture<ApiFactory>
         Assert.Equal(startingStock, endProducts!.Single(p => p.Id == "prod_K2nM8wQjLp").Stock);
         var endMembers = await client.GetFromJsonAsync<List<MemberDto>>("/api/members");
         Assert.Equal(startingBalance, endMembers!.Single(m => m.Id == "mbr_W7gHk9rTfL").Balance);
+
+        // Ledger trail: one Charge entry from the Member Charge payment
+        // (sourced by the TabPayment.Id) and one Payment entry from the
+        // void (also sourced by the same TabPayment.Id).
+        using var db = _factory.CreateDbContext();
+        var entries = db.MemberLedgerEntries
+            .Where(e => e.MemberId == "mbr_W7gHk9rTfL" && e.SourceKind == "Tab")
+            .OrderBy(e => e.PostedAt)
+            .ToList();
+        Assert.Equal(2, entries.Count);
+        Assert.Equal("Charge", entries[0].EntryType);
+        Assert.Equal("F&B", entries[0].Category);
+        Assert.Equal(50m, entries[0].Amount);
+        Assert.Equal("Payment", entries[1].EntryType);
+        Assert.Equal(50m, entries[1].Amount);
+        // Both share the same TabPayment.Id as SourceId.
+        Assert.Equal(entries[0].SourceId, entries[1].SourceId);
     }
 
     [Fact]

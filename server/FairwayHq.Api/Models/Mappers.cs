@@ -170,4 +170,13 @@ public static class Mappers
         t.TipAmount = d.TipAmount; t.TaxRate = d.TaxRate;
         t.Notes = d.Notes;
     }
+
+    public static MemberLedgerEntryDto ToDto(this MemberLedgerEntry e) =>
+        new(e.Id, e.MemberId, e.EntryType, e.Category, e.Amount, e.Method,
+            e.Note, e.PostedAt, e.SourceKind, e.SourceId,
+            e.ReversesEntryId, e.VoidedAt, e.VoidedByEntryId);
+
+    // Ledger entries are append-only — there's no Apply() because they're
+    // never mutated post-write. Restore constructs entities directly from
+    // DTOs in OpsEndpoints.
 }

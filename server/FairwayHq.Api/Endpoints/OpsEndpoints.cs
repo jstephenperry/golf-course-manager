@@ -27,6 +27,7 @@ public static class OpsEndpoints
             db.TabLineItems.RemoveRange(db.TabLineItems);
             db.TabPayments.RemoveRange(db.TabPayments);
             db.Tabs.RemoveRange(db.Tabs);
+            db.MemberLedgerEntries.RemoveRange(db.MemberLedgerEntries);
             db.Maintenance.RemoveRange(db.Maintenance);
             db.Tournaments.RemoveRange(db.Tournaments);
             db.Products.RemoveRange(db.Products);
@@ -114,6 +115,27 @@ public static class OpsEndpoints
                 }
                 db.Tabs.Add(e);
             }
+            // Ledger entries are append-only — no Apply() helper, just
+            // reconstruct from DTOs. Nullable: pre-ledger backups omit the field.
+            foreach (var d in body.LedgerEntries ?? new List<MemberLedgerEntryDto>())
+            {
+                db.MemberLedgerEntries.Add(new MemberLedgerEntry
+                {
+                    Id = d.Id,
+                    MemberId = d.MemberId,
+                    EntryType = d.EntryType,
+                    Category = d.Category,
+                    Amount = d.Amount,
+                    Method = d.Method,
+                    Note = d.Note,
+                    PostedAt = d.PostedAt,
+                    SourceKind = d.SourceKind,
+                    SourceId = d.SourceId,
+                    ReversesEntryId = d.ReversesEntryId,
+                    VoidedAt = d.VoidedAt,
+                    VoidedByEntryId = d.VoidedByEntryId
+                });
+            }
             await db.SaveChangesAsync();
             await tx.CommitAsync();
             return Results.Ok(new { restored = true });
@@ -149,7 +171,8 @@ public static class OpsEndpoints
             (await db.Tournaments.AsNoTracking().ToListAsync()).Select(t => t.ToDto()).ToList(),
             (await db.Maintenance.AsNoTracking().ToListAsync()).Select(m => m.ToDto()).ToList(),
             tabs.Select(t => t.ToDto()).ToList(),
-            (await db.MemberApplications.AsNoTracking().ToListAsync()).Select(a => a.ToDto()).ToList()
+            (await db.MemberApplications.AsNoTracking().ToListAsync()).Select(a => a.ToDto()).ToList(),
+            (await db.MemberLedgerEntries.AsNoTracking().ToListAsync()).Select(e => e.ToDto()).ToList()
         );
     }
 
@@ -158,6 +181,7 @@ public static class OpsEndpoints
         db.TabLineItems.RemoveRange(db.TabLineItems);
         db.TabPayments.RemoveRange(db.TabPayments);
         db.Tabs.RemoveRange(db.Tabs);
+        db.MemberLedgerEntries.RemoveRange(db.MemberLedgerEntries);
         db.Maintenance.RemoveRange(db.Maintenance);
         db.Tournaments.RemoveRange(db.Tournaments);
         db.Products.RemoveRange(db.Products);

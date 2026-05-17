@@ -20,6 +20,7 @@ public class AppDbContext : DbContext
     public DbSet<TabLineItem> TabLineItems => Set<TabLineItem>();
     public DbSet<TabPayment> TabPayments => Set<TabPayment>();
     public DbSet<MemberApplication> MemberApplications => Set<MemberApplication>();
+    public DbSet<MemberLedgerEntry> MemberLedgerEntries => Set<MemberLedgerEntry>();
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
@@ -34,6 +35,11 @@ public class AppDbContext : DbContext
             .WithOne()
             .HasForeignKey(p => p.TabId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Drives the GET /api/members/{id}/ledger list query
+        // (PostedAt DESC, Id DESC tiebreaker).
+        mb.Entity<MemberLedgerEntry>()
+            .HasIndex(e => new { e.MemberId, e.PostedAt });
 
         // SQLite stores decimals as TEXT for accuracy
         foreach (var prop in mb.Model.GetEntityTypes()

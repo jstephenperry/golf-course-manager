@@ -72,7 +72,14 @@ public static class TabsEndpoints
                 var m = await db.Members.FindAsync(pay.PayerMemberId!);
                 if (m is not null)
                 {
-                    MemberAccountService.CreditMember(m, pay.Amount);
+                    // Tab void: post a balancing Payment entry sourced
+                    // back to the tab. The original Charge entry stays as
+                    // historical truth — the void is conceptually a
+                    // counter-payment, not a reversal.
+                    MemberAccountService.PostPayment(
+                        db, m, pay.Amount, method: null,
+                        sourceKind: "Tab", sourceId: pay.Id,
+                        note: $"Tab #{entity.Id} void", nowUtc: DateTime.UtcNow);
                 }
             }
             entity.Status = "Voided";
@@ -215,18 +222,7 @@ public static class TabsEndpoints
                 return Results.BadRequest(new { error = "tab_not_open" });
 
             await using var tx = await db.Database.BeginTransactionAsync();
-            if (body.Method == "Member Charge")
-            {
-                if (string.IsNullOrEmpty(body.PayerMemberId))
-                    return Results.BadRequest(new { error = "payer_required" });
-                var m = await db.Members.FindAsync(body.PayerMemberId);
-                if (m is null) return Results.BadRequest(new { error = "unknown_member" });
-                if (m.Status == "Suspended")
-                    return Results.BadRequest(new { error = "member_suspended", memberId = m.Id });
-                if (m.Status == "Inactive")
-                    return Results.BadRequest(new { error = "member_inactive", memberId = m.Id });
-                MemberAccountService.ChargeMember(m, body.Amount, DateTime.UtcNow);
-            }
+            // Generate the payment id up front so the ledger entry can reference it.
             var payment = new TabPayment
             {
                 Id = NewId("pay"),
@@ -237,6 +233,22 @@ public static class TabsEndpoints
                 Note = body.Note ?? string.Empty,
                 PaidAt = DateTime.UtcNow.ToString("o")
             };
+
+            if (body.Method == "Member Charge")
+            {
+                if (string.IsNullOrEmpty(body.PayerMemberId))
+                    return Results.BadRequest(new { error = "payer_required" });
+                var m = await db.Members.FindAsync(body.PayerMemberId);
+                if (m is null) return Results.BadRequest(new { error = "unknown_member" });
+                if (m.Status == "Suspended")
+                    return Results.BadRequest(new { error = "member_suspended", memberId = m.Id });
+                if (m.Status == "Inactive")
+                    return Results.BadRequest(new { error = "member_inactive", memberId = m.Id });
+                MemberAccountService.PostCharge(
+                    db, m, body.Amount, category: "F&B",
+                    sourceKind: "Tab", sourceId: payment.Id,
+                    note: payment.Note, nowUtc: DateTime.UtcNow);
+            }
             db.TabPayments.Add(payment);
             await db.SaveChangesAsync();
             await tx.CommitAsync();
@@ -260,7 +272,10 @@ public static class TabsEndpoints
             {
                 var m = await db.Members.FindAsync(pay.PayerMemberId);
                 if (m is not null)
-                    MemberAccountService.CreditMember(m, pay.Amount);
+                    MemberAccountService.PostPayment(
+                        db, m, pay.Amount, method: null,
+                        sourceKind: "Tab", sourceId: pay.Id,
+                        note: $"Tab #{tab.Id} payment removed", nowUtc: DateTime.UtcNow);
             }
             db.TabPayments.Remove(pay);
             await db.SaveChangesAsync();

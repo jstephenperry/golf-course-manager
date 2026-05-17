@@ -110,13 +110,22 @@ public static class MembershipEndpoints
                 Balance = 0m,
             };
 
+            db.Members.Add(member);
+
             // Roll the initiation fee onto the new member's account as the
-            // first charge, kicking off the NET-X timer.
+            // first charge, kicking off the NET-X timer. Posts a ledger
+            // entry tagged with the originating application id so the
+            // member's account history shows the source.
             if (entity.InitiationFee > 0)
             {
-                MemberAccountService.ChargeMember(member, entity.InitiationFee, DateTime.UtcNow);
+                MemberAccountService.PostCharge(
+                    db, member, entity.InitiationFee,
+                    category: "Initiation",
+                    sourceKind: "Application",
+                    sourceId: entity.Id,
+                    note: "Initiation fee",
+                    nowUtc: DateTime.UtcNow);
             }
-            db.Members.Add(member);
 
             entity.Status = "Activated";
             entity.ActivatedMemberId = member.Id;

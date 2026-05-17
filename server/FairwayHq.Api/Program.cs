@@ -75,6 +75,7 @@ app.MapAll();
 app.MapTabs();
 app.MapMembership();
 app.MapMemberOverview();
+app.MapLedger();
 app.MapOps();
 
 // SPA fallback for non-/api paths: serve index.html

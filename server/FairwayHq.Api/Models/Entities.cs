@@ -170,6 +170,43 @@ public class TabPayment
     public string PaidAt { get; set; } = string.Empty;
 }
 
+// Immutable append-only ledger entry. The single source of truth for any
+// change to Member.Balance — every code path that mutates balance must
+// post an entry through MemberAccountService.PostCharge / PostPayment /
+// VoidEntry. Member.Balance and Member.OldestUnpaidChargeAt are caches
+// maintained by those helpers; the ledger is the auditable history.
+//
+// EntryType: "Charge" (debit, increases balance) | "Payment" (credit,
+//   decreases balance) | "Reversal" (posted by VoidEntry against a prior
+//   Charge or Payment; restores prior balance).
+// Category: documented strict-validated string from
+//   MemberAccountService.LedgerCategories.Allowed. Payment entries are
+//   stamped with Category="Payment" so reporting can roll up uniformly.
+// Method: only set on Payment entries — Cash | Card | Check | ACH.
+// Source*: where the entry was posted from ("Manual" for direct
+//   /charges or /payments calls; "Tab" / "Application" for ledger
+//   writes driven by tab and application flows). SourceId references
+//   the originating TabPayment.Id or MemberApplication.Id.
+// VoidedAt / VoidedByEntryId: mirror of ReversesEntryId — once a
+//   Reversal points at an original entry, the original is stamped here
+//   so we don't double-void.
+public class MemberLedgerEntry
+{
+    [Key] public string Id { get; set; } = string.Empty;
+    public string MemberId { get; set; } = string.Empty;
+    public string EntryType { get; set; } = "Charge";
+    public string Category { get; set; } = "Adjustment";
+    public decimal Amount { get; set; }
+    public string? Method { get; set; }
+    public string Note { get; set; } = string.Empty;
+    public string PostedAt { get; set; } = string.Empty;
+    public string SourceKind { get; set; } = "Manual";
+    public string? SourceId { get; set; }
+    public string? ReversesEntryId { get; set; }
+    public string? VoidedAt { get; set; }
+    public string? VoidedByEntryId { get; set; }
+}
+
 public class MemberApplication
 {
     [Key] public string Id { get; set; } = string.Empty;

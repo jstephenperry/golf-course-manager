@@ -154,6 +154,58 @@ public class DunningTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.BadRequest, chargeRes.StatusCode);
     }
 
+    [Fact]
+    public async Task Dunning_suspends_via_real_ledger_entries_backdated_past_NET60()
+    {
+        // End-to-end: open tab → Member Charge (writes a ledger Charge
+        // entry) → backdate both the ledger entry's PostedAt AND the
+        // cached OldestUnpaidChargeAt to >60 days ago → run dunning →
+        // assert suspended. Defends against any future refactor that
+        // makes the cached field drift from ledger ground truth.
+        var client = _factory.CreateClient();
+        var tab = await OpenTabFor(client, "mbr_C6vDp9LqXz");
+        // Priya is Inactive in seed — bring to Active for this test.
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var p = await db.Members.FindAsync("mbr_C6vDp9LqXz");
+            p!.Status = "Active";
+            p.Active = true;
+            await db.SaveChangesAsync();
+        }
+
+        var chargeRes = await client.PostAsJsonAsync($"/api/tabs/{tab.Id}/payments", new
+        {
+            method = "Member Charge",
+            amount = 80m,
+            payerMemberId = "mbr_C6vDp9LqXz",
+            note = "test"
+        });
+        chargeRes.EnsureSuccessStatusCode();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var p = await db.Members.FindAsync("mbr_C6vDp9LqXz");
+            var entry = db.MemberLedgerEntries
+                .Where(e => e.MemberId == "mbr_C6vDp9LqXz" && e.SourceKind == "Tab")
+                .OrderBy(e => e.PostedAt)
+                .First();
+            var backdated = DateTime.UtcNow.AddDays(-70).ToString("o");
+            entry.PostedAt = backdated;
+            p!.OldestUnpaidChargeAt = backdated;
+            await db.SaveChangesAsync();
+        }
+
+        var run = await client.PostAsync("/api/dunning/run", null);
+        var result = await run.Content.ReadFromJsonAsync<DunningRunResultDto>();
+        Assert.Contains("mbr_C6vDp9LqXz", result!.AffectedMemberIds);
+
+        var refreshed = (await client.GetFromJsonAsync<List<MemberDto>>("/api/members"))!
+            .Single(x => x.Id == "mbr_C6vDp9LqXz");
+        Assert.Equal("Suspended", refreshed.Status);
+    }
+
     private static async Task<PlayerTabDto> OpenTabFor(HttpClient client, string memberId)
     {
         var res = await client.PostAsJsonAsync("/api/tabs", new

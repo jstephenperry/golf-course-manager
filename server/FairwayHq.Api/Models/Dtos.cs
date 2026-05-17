@@ -51,6 +51,34 @@ public record MemberOverviewDto(
     List<TeeTimeDto> RecentRounds
 );
 
+// One immutable row of the member ledger. See MemberLedgerEntry entity
+// for field semantics.
+public record MemberLedgerEntryDto(
+    string Id,
+    string MemberId,
+    string EntryType,
+    string Category,
+    decimal Amount,
+    string? Method,
+    string Note,
+    string PostedAt,
+    string SourceKind,
+    string? SourceId,
+    string? ReversesEntryId,
+    string? VoidedAt,
+    string? VoidedByEntryId
+);
+
+public record MemberLedgerListDto(
+    List<MemberLedgerEntryDto> Entries,
+    bool HasMore
+);
+
+// Bodies for the manual posting endpoints.
+public record CreateManualChargeDto(decimal Amount, string Category, string Note);
+public record CreateManualPaymentDto(decimal Amount, string Method, string Note);
+public record VoidLedgerEntryDto(string Note);
+
 public record DunningRunResultDto(int Suspended, int Reinstated, string[] AffectedMemberIds);
 
 public record CourseDto(
@@ -177,6 +205,8 @@ public record PlayerTabDto(
 );
 
 // Bulk snapshot for backup/restore + the "load everything" client bootstrap.
+// LedgerEntries is nullable so pre-ledger backups restore cleanly — the
+// ops restore handler coerces null → empty list.
 public record DataSnapshot(
     List<MemberDto> Members,
     List<CourseDto> Courses,
@@ -188,7 +218,8 @@ public record DataSnapshot(
     List<TournamentDto> Tournaments,
     List<MaintenanceTaskDto> Maintenance,
     List<PlayerTabDto> Tabs,
-    List<MemberApplicationDto> MemberApplications
+    List<MemberApplicationDto> MemberApplications,
+    List<MemberLedgerEntryDto>? LedgerEntries = null
 );
 
 // Body for tab payment posting (auto-stamped PaidAt server-side).
