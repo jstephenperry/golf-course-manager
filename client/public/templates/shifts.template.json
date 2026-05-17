@@ -1,0 +1,11 @@
+[
+  {
+    "_comment": "Required: staffId (must exist), date, start, end. Import staff first.",
+    "id": "shft_example_01",
+    "staffId": "stf_example_01",
+    "date": "2026-06-01",
+    "start": "07:00",
+    "end": "15:00",
+    "notes": ""
+  }
+]

@@ -1,0 +1,11 @@
+[
+  {
+    "_comment": "Required: staffId (must exist), start, end. dayOfWeek 0=Sunday … 6=Saturday. Import staff first.",
+    "id": "wtmp_example_01",
+    "staffId": "stf_example_01",
+    "dayOfWeek": 1,
+    "start": "07:00",
+    "end": "15:00",
+    "notes": ""
+  }
+]

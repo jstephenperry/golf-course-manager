@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fairwayhq.example/schemas/weekly-templates.schema.json",
+  "title": "Weekly templates import",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["staffId", "start", "end"],
+    "additionalProperties": true,
+    "properties": {
+      "id": { "type": "string", "description": "Optional; auto-generated as wtmp_<12hex>." },
+      "staffId": { "type": "string", "description": "Must reference an existing Staff id." },
+      "dayOfWeek": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 6,
+        "description": "0=Sunday, 1=Monday, … 6=Saturday."
+      },
+      "start": { "type": "string", "description": "HH:MM" },
+      "end": { "type": "string", "description": "HH:MM" },
+      "notes": { "type": "string" }
+    }
+  }
+}

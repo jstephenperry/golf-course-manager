@@ -1,0 +1,13 @@
+[
+  {
+    "_comment": "Required: firstName, lastName. id is optional.",
+    "id": "stf_example_01",
+    "firstName": "Theo",
+    "lastName": "Nakamura",
+    "role": "Pro",
+    "email": "theo@fairwayhq.example",
+    "phone": "555-0211",
+    "hourlyRate": 65.0,
+    "active": true
+  }
+]

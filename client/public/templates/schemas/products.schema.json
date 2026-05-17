@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fairwayhq.example/schemas/products.schema.json",
+  "title": "Products import",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["name", "sku"],
+    "additionalProperties": true,
+    "properties": {
+      "id": { "type": "string", "description": "Optional; auto-generated as prod_<12hex>." },
+      "name": { "type": "string", "minLength": 1 },
+      "category": { "enum": ["Clubs", "Balls", "Apparel", "Accessories", "Food & Beverage"] },
+      "sku": { "type": "string", "minLength": 1 },
+      "price": { "type": "number", "minimum": 0 },
+      "cost": { "type": "number", "minimum": 0 },
+      "stock": { "type": "integer", "minimum": 0 },
+      "reorderLevel": { "type": "integer", "minimum": 0 }
+    }
+  }
+}

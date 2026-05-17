@@ -1,0 +1,19 @@
+[
+  {
+    "_comment": "Required: firstName, lastName. Tier ∈ Social|Weekday|Full|Corporate. Status ∈ Active|Suspended|Inactive. id is optional; omit to auto-generate.",
+    "id": "mbr_example_01",
+    "firstName": "Eleanor",
+    "lastName": "Park",
+    "email": "eleanor.park@example.com",
+    "phone": "555-0142",
+    "tier": "Full",
+    "handicap": 8.4,
+    "joinDate": "2019-03-12",
+    "active": true,
+    "balance": 0.0,
+    "status": "Active",
+    "oldestUnpaidChargeAt": null,
+    "suspendedAt": null,
+    "notes": ""
+  }
+]

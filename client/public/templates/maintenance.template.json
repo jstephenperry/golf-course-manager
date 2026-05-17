@@ -1,0 +1,14 @@
+[
+  {
+    "_comment": "Required: title. courseId / assignedTo are optional but must reference existing rows if provided. Priority ∈ Low|Medium|High. Status ∈ Open|In Progress|Completed.",
+    "id": "mnt_example_01",
+    "title": "Top-dress greens 1-9",
+    "category": "Greens",
+    "courseId": "crs_example_01",
+    "assignedTo": "stf_example_01",
+    "dueDate": "2026-06-15",
+    "priority": "High",
+    "status": "Open",
+    "notes": ""
+  }
+]

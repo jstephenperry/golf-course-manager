@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useStore } from "../data/store";
 import { useToaster } from "./Toaster";
 
@@ -16,9 +16,10 @@ const NAV = [
 ];
 
 export function Layout() {
-  const { reset, clear, data, exportSnapshot, importSnapshot, loading, error } =
+  const { clear, data, exportSnapshot, importSnapshot, loading, error } =
     useStore();
   const toaster = useToaster();
+  const navigate = useNavigate();
   const fileInput = useRef<HTMLInputElement>(null);
   const location = useLocation();
   const current = NAV.find((n) =>
@@ -107,18 +108,9 @@ export function Layout() {
           </div>
           <button
             className="reset-btn"
-            onClick={() => {
-              if (
-                hasData &&
-                !window.confirm(
-                  "Replace current data with the sample dataset?",
-                )
-              )
-                return;
-              void reset();
-            }}
+            onClick={() => navigate("/import")}
           >
-            Load sample data
+            Import data…
           </button>
           <button className="reset-btn" onClick={downloadBackup}>
             Download backup

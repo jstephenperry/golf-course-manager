@@ -1,0 +1,13 @@
+[
+  {
+    "_comment": "Required: name, sku. Category ∈ Clubs|Balls|Apparel|Accessories|Food & Beverage. id is optional.",
+    "id": "prod_example_01",
+    "name": "Titleist Pro V1 Dozen",
+    "category": "Balls",
+    "sku": "TIT-PV1-12",
+    "price": 54.99,
+    "cost": 36.0,
+    "stock": 40,
+    "reorderLevel": 12
+  }
+]

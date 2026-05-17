@@ -35,6 +35,9 @@ const Tournaments = lazy(() =>
 const Maintenance = lazy(() =>
   import("./pages/Maintenance").then((m) => ({ default: m.Maintenance })),
 );
+const ImportPage = lazy(() =>
+  import("./pages/Import").then((m) => ({ default: m.Import })),
+);
 
 function PageFallback() {
   return (
@@ -129,6 +132,14 @@ export default function App() {
                 element={
                   <Suspense fallback={<PageFallback />}>
                     <Maintenance />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="import"
+                element={
+                  <Suspense fallback={<PageFallback />}>
+                    <ImportPage />
                   </Suspense>
                 }
               />

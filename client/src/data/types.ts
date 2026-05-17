@@ -67,6 +67,20 @@ export interface MemberLedgerList {
   hasMore: boolean;
 }
 
+// Per-row result reported by /api/import/<entity>.
+export interface ImportRowError {
+  index: number;
+  id: string | null;
+  error: string;
+  detail: string | null;
+}
+
+export interface ImportResult {
+  created: number;
+  skipped: number;
+  errors: ImportRowError[];
+}
+
 export type ApplicationStatus =
   | "Pending"
   | "Approved"

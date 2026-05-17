@@ -1,0 +1,13 @@
+[
+  {
+    "_comment": "Required: date (YYYY-MM-DD), time (HH:MM), courseId (must exist). Status ∈ Booked|Checked In|Completed|Cancelled. Players is an array of member ids. Import courses + members first.",
+    "id": "tee_example_01",
+    "date": "2026-06-01",
+    "time": "08:00",
+    "courseId": "crs_example_01",
+    "players": ["mbr_example_01"],
+    "cart": true,
+    "status": "Booked",
+    "notes": ""
+  }
+]

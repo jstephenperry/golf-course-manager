@@ -49,6 +49,37 @@ describe("api client", () => {
     }
   });
 
+  it("import.members POSTs an array to /api/import/members and parses ImportResult", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ created: 2, skipped: 1, errors: [] }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    const rows = [{ firstName: "A", lastName: "B" }, { firstName: "C", lastName: "D" }];
+    const result = await api.import.members(rows);
+    expect(result.created).toBe(2);
+    expect(result.skipped).toBe(1);
+    const call = fetchMock.mock.calls[0]!;
+    expect(call[0]).toBe("/api/import/members");
+    expect(call[1]).toMatchObject({ method: "POST" });
+    expect(JSON.parse(call[1].body)).toHaveLength(2);
+  });
+
+  it("import.teeTimes routes to the hyphenated path", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ created: 0, skipped: 0, errors: [] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    await api.import.teeTimes([]);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/import/tee-times",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
   it("getLedger GETs /api/members/:id/ledger with limit + before cursor", async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ entries: [], hasMore: false }), {

@@ -1,0 +1,16 @@
+[
+  {
+    "_comment": "Required: name. Status ∈ Open|Closed|Cart Path Only. id is optional.",
+    "id": "crs_example_01",
+    "name": "Championship Course",
+    "holes": 18,
+    "par": 72,
+    "yardage": 7124,
+    "rating": 74.2,
+    "slope": 138,
+    "status": "Open",
+    "openTime": "06:00",
+    "closeTime": "18:00",
+    "notes": ""
+  }
+]

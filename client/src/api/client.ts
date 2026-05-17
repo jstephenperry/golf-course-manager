@@ -2,6 +2,7 @@ import type {
   Course,
   DataState,
   DunningRunResult,
+  ImportResult,
   MaintenanceTask,
   Member,
   MemberApplication,
@@ -194,6 +195,18 @@ export const api = {
       request<PlayerTab>("POST", `/tabs/${tabId}/payments`, body),
     removePayment: (tabId: string, paymentId: string) =>
       request<PlayerTab>("DELETE", `/tabs/${tabId}/payments/${paymentId}`),
+  },
+
+  import: {
+    members: (rows: unknown[]) => request<ImportResult>("POST", "/import/members", rows),
+    courses: (rows: unknown[]) => request<ImportResult>("POST", "/import/courses", rows),
+    teeTimes: (rows: unknown[]) => request<ImportResult>("POST", "/import/tee-times", rows),
+    staff: (rows: unknown[]) => request<ImportResult>("POST", "/import/staff", rows),
+    shifts: (rows: unknown[]) => request<ImportResult>("POST", "/import/shifts", rows),
+    weeklyTemplates: (rows: unknown[]) => request<ImportResult>("POST", "/import/weekly-templates", rows),
+    products: (rows: unknown[]) => request<ImportResult>("POST", "/import/products", rows),
+    tournaments: (rows: unknown[]) => request<ImportResult>("POST", "/import/tournaments", rows),
+    maintenance: (rows: unknown[]) => request<ImportResult>("POST", "/import/maintenance", rows),
   },
 
   snapshot: () => request<DataState>("GET", "/snapshot"),

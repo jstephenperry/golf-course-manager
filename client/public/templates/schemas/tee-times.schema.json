@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fairwayhq.example/schemas/tee-times.schema.json",
+  "title": "Tee times import",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["date", "time", "courseId"],
+    "additionalProperties": true,
+    "properties": {
+      "id": { "type": "string", "description": "Optional; auto-generated as tee_<12hex>." },
+      "date": { "type": "string", "description": "YYYY-MM-DD" },
+      "time": { "type": "string", "description": "HH:MM (24-hour, 15-minute increments expected)" },
+      "courseId": { "type": "string", "description": "Must reference an existing Course id." },
+      "players": {
+        "type": "array",
+        "items": { "type": "string", "description": "Member id; must exist when the tab/charge flow refers to it." }
+      },
+      "cart": { "type": "boolean" },
+      "status": { "enum": ["Booked", "Checked In", "Completed", "Cancelled"] },
+      "notes": { "type": "string" }
+    }
+  }
+}

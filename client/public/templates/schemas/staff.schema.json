@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fairwayhq.example/schemas/staff.schema.json",
+  "title": "Staff import",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["firstName", "lastName"],
+    "additionalProperties": true,
+    "properties": {
+      "id": { "type": "string", "description": "Optional; auto-generated as stf_<12hex>." },
+      "firstName": { "type": "string", "minLength": 1 },
+      "lastName": { "type": "string", "minLength": 1 },
+      "role": { "type": "string" },
+      "email": { "type": "string" },
+      "phone": { "type": "string" },
+      "hourlyRate": { "type": "number", "minimum": 0 },
+      "active": { "type": "boolean" }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fairwayhq.example/schemas/maintenance.schema.json",
+  "title": "Maintenance import",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["title"],
+    "additionalProperties": true,
+    "properties": {
+      "id": { "type": "string", "description": "Optional; auto-generated as mnt_<12hex>." },
+      "title": { "type": "string", "minLength": 1 },
+      "category": { "type": "string", "description": "Free-form (e.g. Greens, Bunker, Irrigation)." },
+      "courseId": { "type": "string", "description": "Optional; if provided, must reference an existing Course." },
+      "assignedTo": { "type": "string", "description": "Optional; if provided, must reference an existing Staff id." },
+      "dueDate": { "type": "string", "description": "YYYY-MM-DD" },
+      "priority": { "enum": ["Low", "Medium", "High"] },
+      "status": { "enum": ["Open", "In Progress", "Completed"] },
+      "notes": { "type": "string" }
+    }
+  }
+}

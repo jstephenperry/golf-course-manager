@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fairwayhq.example/schemas/courses.schema.json",
+  "title": "Courses import",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["name"],
+    "additionalProperties": true,
+    "properties": {
+      "id": { "type": "string", "description": "Optional; auto-generated as crs_<12hex>." },
+      "name": { "type": "string", "minLength": 1 },
+      "holes": { "type": "integer", "minimum": 0 },
+      "par": { "type": "integer", "minimum": 0 },
+      "yardage": { "type": "integer", "minimum": 0 },
+      "rating": { "type": "number" },
+      "slope": { "type": "integer" },
+      "status": { "enum": ["Open", "Closed", "Cart Path Only"] },
+      "openTime": { "type": "string", "description": "HH:MM, 24-hour" },
+      "closeTime": { "type": "string", "description": "HH:MM, 24-hour" },
+      "notes": { "type": "string" }
+    }
+  }
+}
