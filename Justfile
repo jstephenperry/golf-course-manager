@@ -11,6 +11,7 @@ install-client:
 
 install-server:
     cd server && dotnet restore
+    dotnet tool restore
 
 # ---------- Dev loops ----------
 # Run client + server in two terminals (preferred for UI iteration)
@@ -23,6 +24,19 @@ dev-server:
 # Single-process integrated dev: build client into wwwroot, run API
 dev-integrated:
     bash scripts/run-e2e-server.sh
+
+# ---------- EF Core migrations ----------
+# Generate a new migration from model changes: just migration-add <Name>
+migration-add NAME:
+    dotnet ef migrations add {{NAME}} --project server/FairwayHq.Api --output-dir Data/Migrations
+
+# Apply pending migrations to the dev database
+migration-update:
+    dotnet ef database update --project server/FairwayHq.Api
+
+# Show migration history
+migration-list:
+    dotnet ef migrations list --project server/FairwayHq.Api
 
 # ---------- Build ----------
 build: build-client build-server
