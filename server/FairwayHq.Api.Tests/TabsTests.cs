@@ -16,9 +16,9 @@ public class TabsTests : IClassFixture<ApiFactory>
     {
         var client = ClientWithSeed();
 
-        // Pick the iced tea product (p5: stock 96 from seed, price 3.50)
+        // Pick the iced tea product (stock 96 from seed, price 3.50)
         var products = await client.GetFromJsonAsync<List<ProductDto>>("/api/products");
-        var product = Assert.Single(products!.Where(p => p.Id == "p5"));
+        var product = Assert.Single(products!.Where(p => p.Id == "prod_W6tRd3JmPk"));
         var startingStock = product.Stock;
 
         // Open a tab for member m1
@@ -26,7 +26,7 @@ public class TabsTests : IClassFixture<ApiFactory>
         {
             openedAt = DateTime.UtcNow.ToString("o"),
             status = "Open",
-            memberIds = new[] { "m1" },
+            memberIds = new[] { "mbr_J4nKp2vQ8x" },
             guests = Array.Empty<string>(),
             items = Array.Empty<object>(),
             payments = Array.Empty<object>(),
@@ -40,7 +40,7 @@ public class TabsTests : IClassFixture<ApiFactory>
         // Add 3 iced teas
         var afterAdd = await (await client.PostAsJsonAsync(
             $"/api/tabs/{opened.Id}/items",
-            new CreateLineItemDto("p5", 3, "")
+            new CreateLineItemDto("prod_W6tRd3JmPk", 3, "")
         )).Content.ReadFromJsonAsync<PlayerTabDto>();
         Assert.Single(afterAdd!.Items);
         Assert.Equal(3, afterAdd.Items[0].Quantity);
@@ -48,7 +48,7 @@ public class TabsTests : IClassFixture<ApiFactory>
 
         // Stock decremented
         var afterProducts = await client.GetFromJsonAsync<List<ProductDto>>("/api/products");
-        var afterProduct = afterProducts!.Single(p => p.Id == "p5");
+        var afterProduct = afterProducts!.Single(p => p.Id == "prod_W6tRd3JmPk");
         Assert.Equal(startingStock - 3, afterProduct.Stock);
 
         // Subtotal = 10.50, tax = 10.50 * 0.0825 = 0.866..., total ~11.37
@@ -80,19 +80,19 @@ public class TabsTests : IClassFixture<ApiFactory>
         var client = _factory.CreateClient();
 
         var products = await client.GetFromJsonAsync<List<ProductDto>>("/api/products");
-        var ball = products!.Single(p => p.Id == "p1"); // Pro V1 dozen, $54.99
+        var ball = products!.Single(p => p.Id == "prod_K2nM8wQjLp"); // Pro V1 dozen, $54.99
         var startingStock = ball.Stock;
 
         var members = await client.GetFromJsonAsync<List<MemberDto>>("/api/members");
-        var member = members!.Single(m => m.Id == "m2"); // Marcus, has balance 125.50
+        var member = members!.Single(m => m.Id == "mbr_W7gHk9rTfL"); // Marcus, has balance 125.50
         var startingBalance = member.Balance;
 
-        // Open tab for m2 and add 2 dozen balls
+        // Open tab for Marcus and add 2 dozen balls
         var opened = await (await client.PostAsJsonAsync("/api/tabs", new
         {
             openedAt = DateTime.UtcNow.ToString("o"),
             status = "Open",
-            memberIds = new[] { "m2" },
+            memberIds = new[] { "mbr_W7gHk9rTfL" },
             guests = Array.Empty<string>(),
             items = Array.Empty<object>(),
             payments = Array.Empty<object>(),
@@ -102,22 +102,22 @@ public class TabsTests : IClassFixture<ApiFactory>
         })).Content.ReadFromJsonAsync<PlayerTabDto>();
 
         await client.PostAsJsonAsync($"/api/tabs/{opened!.Id}/items",
-            new CreateLineItemDto("p1", 2, ""));
+            new CreateLineItemDto("prod_K2nM8wQjLp", 2, ""));
 
         // Charge $50 to member's account
         await client.PostAsJsonAsync($"/api/tabs/{opened.Id}/payments", new
         {
             method = "Member Charge",
             amount = 50m,
-            payerMemberId = "m2",
+            payerMemberId = "mbr_W7gHk9rTfL",
             note = ""
         });
 
         // Sanity: stock dropped, member balance went up
         var midProducts = await client.GetFromJsonAsync<List<ProductDto>>("/api/products");
-        Assert.Equal(startingStock - 2, midProducts!.Single(p => p.Id == "p1").Stock);
+        Assert.Equal(startingStock - 2, midProducts!.Single(p => p.Id == "prod_K2nM8wQjLp").Stock);
         var midMembers = await client.GetFromJsonAsync<List<MemberDto>>("/api/members");
-        Assert.Equal(startingBalance + 50m, midMembers!.Single(m => m.Id == "m2").Balance);
+        Assert.Equal(startingBalance + 50m, midMembers!.Single(m => m.Id == "mbr_W7gHk9rTfL").Balance);
 
         // Void the tab
         var voidRes = await client.PostAsync($"/api/tabs/{opened.Id}/void", null);
@@ -127,9 +127,9 @@ public class TabsTests : IClassFixture<ApiFactory>
 
         // Stock back, balance back
         var endProducts = await client.GetFromJsonAsync<List<ProductDto>>("/api/products");
-        Assert.Equal(startingStock, endProducts!.Single(p => p.Id == "p1").Stock);
+        Assert.Equal(startingStock, endProducts!.Single(p => p.Id == "prod_K2nM8wQjLp").Stock);
         var endMembers = await client.GetFromJsonAsync<List<MemberDto>>("/api/members");
-        Assert.Equal(startingBalance, endMembers!.Single(m => m.Id == "m2").Balance);
+        Assert.Equal(startingBalance, endMembers!.Single(m => m.Id == "mbr_W7gHk9rTfL").Balance);
     }
 
     [Fact]
@@ -142,7 +142,7 @@ public class TabsTests : IClassFixture<ApiFactory>
         {
             openedAt = DateTime.UtcNow.ToString("o"),
             status = "Open",
-            memberIds = new[] { "m1" },
+            memberIds = new[] { "mbr_J4nKp2vQ8x" },
             guests = Array.Empty<string>(),
             items = Array.Empty<object>(),
             payments = Array.Empty<object>(),
@@ -156,7 +156,7 @@ public class TabsTests : IClassFixture<ApiFactory>
 
         // Now try to add an item — should fail
         var addRes = await client.PostAsJsonAsync($"/api/tabs/{opened.Id}/items",
-            new CreateLineItemDto("p5", 1, ""));
+            new CreateLineItemDto("prod_W6tRd3JmPk", 1, ""));
         Assert.Equal(HttpStatusCode.BadRequest, addRes.StatusCode);
     }
 
@@ -165,13 +165,13 @@ public class TabsTests : IClassFixture<ApiFactory>
     {
         var client = _factory.CreateClient();
         var startingStock = (await client.GetFromJsonAsync<List<ProductDto>>("/api/products"))!
-            .Single(p => p.Id == "p4").Stock;
+            .Single(p => p.Id == "prod_F4hLn7QxBg").Stock;
 
         var opened = await (await client.PostAsJsonAsync("/api/tabs", new
         {
             openedAt = DateTime.UtcNow.ToString("o"),
             status = "Open",
-            memberIds = new[] { "m1" },
+            memberIds = new[] { "mbr_J4nKp2vQ8x" },
             guests = Array.Empty<string>(),
             items = Array.Empty<object>(),
             payments = Array.Empty<object>(),
@@ -181,7 +181,7 @@ public class TabsTests : IClassFixture<ApiFactory>
         })).Content.ReadFromJsonAsync<PlayerTabDto>();
 
         var afterAdd = await (await client.PostAsJsonAsync($"/api/tabs/{opened!.Id}/items",
-            new CreateLineItemDto("p4", 2, ""))).Content.ReadFromJsonAsync<PlayerTabDto>();
+            new CreateLineItemDto("prod_F4hLn7QxBg", 2, ""))).Content.ReadFromJsonAsync<PlayerTabDto>();
         var itemId = afterAdd!.Items[0].Id;
 
         // Bump to 5 (delta +3)
@@ -189,20 +189,20 @@ public class TabsTests : IClassFixture<ApiFactory>
             new { quantity = 5 });
 
         var afterBump = (await client.GetFromJsonAsync<List<ProductDto>>("/api/products"))!
-            .Single(p => p.Id == "p4");
+            .Single(p => p.Id == "prod_F4hLn7QxBg");
         Assert.Equal(startingStock - 5, afterBump.Stock);
 
         // Reduce to 1 (delta -4)
         await client.PutAsJsonAsync($"/api/tabs/{opened.Id}/items/{itemId}/quantity",
             new { quantity = 1 });
         var afterReduce = (await client.GetFromJsonAsync<List<ProductDto>>("/api/products"))!
-            .Single(p => p.Id == "p4");
+            .Single(p => p.Id == "prod_F4hLn7QxBg");
         Assert.Equal(startingStock - 1, afterReduce.Stock);
 
         // Remove item entirely
         await client.DeleteAsync($"/api/tabs/{opened.Id}/items/{itemId}");
         var afterRemove = (await client.GetFromJsonAsync<List<ProductDto>>("/api/products"))!
-            .Single(p => p.Id == "p4");
+            .Single(p => p.Id == "prod_F4hLn7QxBg");
         Assert.Equal(startingStock, afterRemove.Stock);
     }
 }
