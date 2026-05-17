@@ -49,6 +49,66 @@ describe("api client", () => {
     }
   });
 
+  it("getLedger GETs /api/members/:id/ledger with limit + before cursor", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ entries: [], hasMore: false }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    await api.members.getLedger("m1", { limit: 10, before: "2026-05-01T00:00:00Z" });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/members/m1/ledger?limit=10&before=2026-05-01T00%3A00%3A00Z",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("postCharge POSTs to /api/members/:id/charges with the body", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: "led_x", entryType: "Charge" }), {
+        status: 201,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    await api.members.postCharge("m1", { amount: 50, category: "Dues", note: "" });
+    const call = fetchMock.mock.calls[0]!;
+    expect(call[0]).toBe("/api/members/m1/charges");
+    expect(call[1]).toMatchObject({ method: "POST" });
+    expect(JSON.parse(call[1].body)).toMatchObject({
+      amount: 50,
+      category: "Dues",
+    });
+  });
+
+  it("postPayment POSTs to /api/members/:id/payments with the body", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: "led_y", entryType: "Payment" }), {
+        status: 201,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    await api.members.postPayment("m1", { amount: 30, method: "Card", note: "" });
+    const call = fetchMock.mock.calls[0]!;
+    expect(call[0]).toBe("/api/members/m1/payments");
+    expect(JSON.parse(call[1].body)).toMatchObject({
+      amount: 30,
+      method: "Card",
+    });
+  });
+
+  it("voidLedgerEntry POSTs to /api/members/ledger/:entryId/void", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: "led_r", entryType: "Reversal" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    await api.members.voidLedgerEntry("led_x", { note: "mistake" });
+    const call = fetchMock.mock.calls[0]!;
+    expect(call[0]).toBe("/api/members/ledger/led_x/void");
+    expect(call[1]).toMatchObject({ method: "POST" });
+  });
+
   it("getOverview GETs /api/members/:id/overview and returns parsed body", async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(

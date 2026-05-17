@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { AddChargeModal } from "../components/AddChargeModal";
+import { TakePaymentModal } from "../components/TakePaymentModal";
 import { useToaster } from "../components/Toaster";
 import { useStore } from "../data/store";
-import type { MemberOverview } from "../data/types";
+import type { MemberLedgerEntry, MemberOverview } from "../data/types";
 import { formatMoney } from "../data/utils";
+
+const PAGE_SIZE = 25;
 
 export function MemberDetail() {
   const { memberId } = useParams();
@@ -21,15 +25,33 @@ export function MemberDetail() {
   const [notesDraft, setNotesDraft] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
 
-  // Pull a fresh overview when the URL id changes or when tee-times data has
-  // moved (a new round added in another tab would otherwise look stale).
+  // Ledger state — local to this page; not part of the global store.
+  const [entries, setEntries] = useState<MemberLedgerEntry[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
+  const [showChargeModal, setShowChargeModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [posting, setPosting] = useState(false);
+
+  // Pull a fresh overview + first ledger page when the URL id changes.
+  // tee-times.length in the dep array re-fetches the overview when a new
+  // round is added in another tab.
   useEffect(() => {
     if (!memberId) return;
     setOverviewLoading(true);
-    members
-      .loadOverview(memberId)
-      .then((o) => setOverview(o))
-      .finally(() => setOverviewLoading(false));
+    setLedgerLoading(true);
+    Promise.all([
+      members.loadOverview(memberId),
+      members.loadLedger(memberId, { limit: PAGE_SIZE }),
+    ]).then(([o, l]) => {
+      setOverview(o);
+      if (l) {
+        setEntries(l.entries);
+        setHasMore(l.hasMore);
+      }
+      setOverviewLoading(false);
+      setLedgerLoading(false);
+    });
   }, [memberId, members, data.teeTimes.length]);
 
   // Keep the notes editor in sync with the canonical store record. We trust
@@ -70,6 +92,67 @@ export function MemberDetail() {
       if (updated) toaster.push({ kind: "success", message: "Notes saved" });
     } finally {
       setSavingNotes(false);
+    }
+  };
+
+  const loadMore = async () => {
+    if (entries.length === 0) return;
+    setLedgerLoading(true);
+    const oldest = entries[entries.length - 1].postedAt;
+    const next = await members.loadLedger(member.id, {
+      limit: PAGE_SIZE,
+      before: oldest,
+    });
+    if (next) {
+      setEntries([...entries, ...next.entries]);
+      setHasMore(next.hasMore);
+    }
+    setLedgerLoading(false);
+  };
+
+  const submitCharge = async (body: {
+    amount: number;
+    category: string;
+    note: string;
+  }) => {
+    setPosting(true);
+    const entry = await members.postCharge(member.id, body);
+    setPosting(false);
+    if (entry) {
+      setEntries([entry, ...entries]);
+      setShowChargeModal(false);
+    }
+  };
+
+  const submitPayment = async (body: {
+    amount: number;
+    method: string;
+    note: string;
+  }) => {
+    setPosting(true);
+    const entry = await members.postPayment(member.id, body);
+    setPosting(false);
+    if (entry) {
+      setEntries([entry, ...entries]);
+      setShowPaymentModal(false);
+    }
+  };
+
+  const voidEntry = async (entry: MemberLedgerEntry) => {
+    if (!window.confirm(`Void this ${entry.entryType.toLowerCase()}? This will post a reversal entry.`))
+      return;
+    const reversal = await members.voidLedgerEntry(entry.id, { note: "" });
+    if (reversal) {
+      // Locally apply both the new reversal and the VoidedAt stamp on the
+      // original. Avoids a refetch round-trip on the common path.
+      setEntries((current) => [
+        reversal,
+        ...current.map((e) =>
+          e.id === entry.id
+            ? { ...e, voidedAt: reversal.postedAt, voidedByEntryId: reversal.id }
+            : e,
+        ),
+      ]);
     }
   };
 
@@ -194,6 +277,153 @@ export function MemberDetail() {
           </div>
         </div>
       </div>
+
+      {/* Account / Ledger */}
+      <div className="card" style={{ marginBottom: 12 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 12,
+            flexWrap: "wrap",
+            gap: 8,
+          }}
+        >
+          <h3 style={{ margin: 0 }}>Account</h3>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button
+              className="btn secondary sm"
+              onClick={() => setShowPaymentModal(true)}
+            >
+              Take payment
+            </button>
+            <button
+              className="btn sm"
+              onClick={() => setShowChargeModal(true)}
+              disabled={member.status !== "Active"}
+              title={
+                member.status !== "Active"
+                  ? "Charges only allowed on Active members"
+                  : ""
+              }
+            >
+              Add charge
+            </button>
+          </div>
+        </div>
+
+        {ledgerLoading && entries.length === 0 ? (
+          <div className="muted">Loading…</div>
+        ) : entries.length === 0 ? (
+          <div className="empty">
+            No account activity yet. Take a payment or add a charge to start
+            the ledger.
+          </div>
+        ) : (
+          <>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Category</th>
+                  <th style={{ textAlign: "right" }}>Amount</th>
+                  <th>Method</th>
+                  <th>Note</th>
+                  <th>Source</th>
+                  <th style={{ width: 1 }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {entries.map((e) => {
+                  const voided = e.voidedAt !== null;
+                  const isReversal = e.entryType === "Reversal";
+                  return (
+                    <tr
+                      key={e.id}
+                      style={
+                        voided || isReversal
+                          ? { opacity: 0.55, textDecoration: voided ? "line-through" : "none" }
+                          : undefined
+                      }
+                    >
+                      <td>{e.postedAt.slice(0, 10)}</td>
+                      <td>
+                        <span
+                          className={`pill ${
+                            e.entryType === "Charge"
+                              ? "red"
+                              : e.entryType === "Payment"
+                                ? "green"
+                                : "gray"
+                          }`}
+                        >
+                          {e.entryType}
+                        </span>
+                      </td>
+                      <td>{e.category}</td>
+                      <td style={{ textAlign: "right" }}>
+                        {formatMoney(e.amount)}
+                      </td>
+                      <td>{e.method ?? "—"}</td>
+                      <td className="muted">{e.note}</td>
+                      <td className="muted" style={{ fontSize: 12 }}>
+                        {e.sourceKind === "Manual"
+                          ? "Manual"
+                          : e.sourceKind === "Tab"
+                            ? `Tab`
+                            : "Application"}
+                      </td>
+                      <td>
+                        {!voided &&
+                          !isReversal &&
+                          e.sourceKind === "Manual" && (
+                            <button
+                              className="btn ghost sm"
+                              onClick={() => voidEntry(e)}
+                            >
+                              Void
+                            </button>
+                          )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {hasMore && (
+              <div style={{ marginTop: 8, textAlign: "center" }}>
+                <button
+                  className="btn secondary sm"
+                  onClick={loadMore}
+                  disabled={ledgerLoading}
+                >
+                  {ledgerLoading ? "Loading…" : "Load more"}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {showChargeModal && (
+        <AddChargeModal
+          memberName={`${member.firstName} ${member.lastName}`}
+          onClose={() => setShowChargeModal(false)}
+          onSubmit={submitCharge}
+          busy={posting}
+        />
+      )}
+      {showPaymentModal && (
+        <TakePaymentModal
+          memberName={`${member.firstName} ${member.lastName}`}
+          currentBalance={member.balance}
+          onClose={() => setShowPaymentModal(false)}
+          onSubmit={submitPayment}
+          busy={posting}
+        />
+      )}
 
       {/* Recent rounds */}
       <div className="card" style={{ marginBottom: 12 }}>

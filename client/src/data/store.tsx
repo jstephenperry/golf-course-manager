@@ -17,6 +17,8 @@ import type {
   MaintenanceTask,
   Member,
   MemberApplication,
+  MemberLedgerEntry,
+  MemberLedgerList,
   MemberOverview,
   PaymentMethod,
   PlayerTab,
@@ -104,6 +106,22 @@ interface StoreApi {
     suspend: (id: string, note?: string) => Promise<Member | null>;
     reinstate: (id: string) => Promise<Member | null>;
     loadOverview: (id: string) => Promise<MemberOverview | null>;
+    loadLedger: (
+      id: string,
+      opts?: { limit?: number; before?: string },
+    ) => Promise<MemberLedgerList | null>;
+    postCharge: (
+      id: string,
+      body: { amount: number; category: string; note: string },
+    ) => Promise<MemberLedgerEntry | null>;
+    postPayment: (
+      id: string,
+      body: { amount: number; method: string; note: string },
+    ) => Promise<MemberLedgerEntry | null>;
+    voidLedgerEntry: (
+      entryId: string,
+      body: { note: string },
+    ) => Promise<MemberLedgerEntry | null>;
   };
   applications: ResourceActions<MemberApplication> & {
     approve: (
@@ -339,8 +357,54 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return handleError("Load member overview", e);
         }
       },
+      loadLedger: async (
+        id: string,
+        opts?: { limit?: number; before?: string },
+      ) => {
+        try {
+          return await api.members.getLedger(id, opts);
+        } catch (e) {
+          return handleError("Load member ledger", e);
+        }
+      },
+      postCharge: async (
+        id: string,
+        body: { amount: number; category: string; note: string },
+      ) => {
+        try {
+          const entry = await api.members.postCharge(id, body);
+          await refreshMembers();
+          toaster.push({ kind: "success", message: "Charge posted" });
+          return entry;
+        } catch (e) {
+          return handleError("Post charge", e);
+        }
+      },
+      postPayment: async (
+        id: string,
+        body: { amount: number; method: string; note: string },
+      ) => {
+        try {
+          const entry = await api.members.postPayment(id, body);
+          await refreshMembers();
+          toaster.push({ kind: "success", message: "Payment recorded" });
+          return entry;
+        } catch (e) {
+          return handleError("Take payment", e);
+        }
+      },
+      voidLedgerEntry: async (entryId: string, body: { note: string }) => {
+        try {
+          const reversal = await api.members.voidLedgerEntry(entryId, body);
+          await refreshMembers();
+          toaster.push({ kind: "success", message: "Entry voided" });
+          return reversal;
+        } catch (e) {
+          return handleError("Void ledger entry", e);
+        }
+      },
     }),
-    [membersBase, upsert, toaster, handleError],
+    [membersBase, refreshMembers, upsert, toaster, handleError],
   );
 
   const applicationsBase = useMemo(

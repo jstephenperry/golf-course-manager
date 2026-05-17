@@ -26,6 +26,47 @@ export interface MemberOverview {
   recentRounds: TeeTime[];
 }
 
+export type LedgerEntryType = "Charge" | "Payment" | "Reversal";
+export type LedgerSourceKind = "Manual" | "Tab" | "Application";
+
+// Strict-validated server-side; documented for the UI dropdowns.
+// "Payment" is reserved for the auto-set category on Payment-type entries
+// and must NOT be offered as a charge category.
+export const LEDGER_CHARGE_CATEGORIES = [
+  "Dues",
+  "F&B",
+  "ProShop",
+  "Tournament",
+  "Initiation",
+  "Lesson",
+  "Adjustment",
+] as const;
+export type LedgerChargeCategory = (typeof LEDGER_CHARGE_CATEGORIES)[number];
+
+export const LEDGER_METHODS = ["Cash", "Card", "Check", "ACH"] as const;
+export type LedgerMethod = (typeof LEDGER_METHODS)[number];
+
+export interface MemberLedgerEntry {
+  id: string;
+  memberId: string;
+  entryType: LedgerEntryType;
+  category: string;
+  amount: number;
+  method: string | null;
+  note: string;
+  postedAt: string;
+  sourceKind: LedgerSourceKind;
+  sourceId: string | null;
+  reversesEntryId: string | null;
+  voidedAt: string | null;
+  voidedByEntryId: string | null;
+}
+
+export interface MemberLedgerList {
+  entries: MemberLedgerEntry[];
+  hasMore: boolean;
+}
+
 export type ApplicationStatus =
   | "Pending"
   | "Approved"

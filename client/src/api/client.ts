@@ -5,6 +5,8 @@ import type {
   MaintenanceTask,
   Member,
   MemberApplication,
+  MemberLedgerEntry,
+  MemberLedgerList,
   MemberOverview,
   PaymentMethod,
   PlayerTab,
@@ -98,6 +100,30 @@ export const api = {
       request<Member>("POST", `/members/${id}/reinstate`),
     getOverview: (id: string) =>
       request<MemberOverview>("GET", `/members/${id}/overview`),
+    getLedger: (id: string, opts?: { limit?: number; before?: string }) => {
+      const params = new URLSearchParams();
+      if (opts?.limit) params.set("limit", String(opts.limit));
+      if (opts?.before) params.set("before", opts.before);
+      const q = params.toString();
+      return request<MemberLedgerList>(
+        "GET",
+        `/members/${id}/ledger${q ? `?${q}` : ""}`,
+      );
+    },
+    postCharge: (
+      id: string,
+      body: { amount: number; category: string; note: string },
+    ) => request<MemberLedgerEntry>("POST", `/members/${id}/charges`, body),
+    postPayment: (
+      id: string,
+      body: { amount: number; method: string; note: string },
+    ) => request<MemberLedgerEntry>("POST", `/members/${id}/payments`, body),
+    voidLedgerEntry: (entryId: string, body: { note: string }) =>
+      request<MemberLedgerEntry>(
+        "POST",
+        `/members/ledger/${entryId}/void`,
+        body,
+      ),
   },
   applications: {
     ...resource<MemberApplication>("/applications"),
