@@ -17,6 +17,7 @@ import type {
   MaintenanceTask,
   Member,
   MemberApplication,
+  MemberOverview,
   PaymentMethod,
   PlayerTab,
   Product,
@@ -102,6 +103,7 @@ interface StoreApi {
   members: ResourceActions<Member> & {
     suspend: (id: string, note?: string) => Promise<Member | null>;
     reinstate: (id: string) => Promise<Member | null>;
+    loadOverview: (id: string) => Promise<MemberOverview | null>;
   };
   applications: ResourceActions<MemberApplication> & {
     approve: (
@@ -328,6 +330,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return m;
         } catch (e) {
           return handleError("Reinstate member", e);
+        }
+      },
+      loadOverview: async (id: string) => {
+        try {
+          return await api.members.getOverview(id);
+        } catch (e) {
+          return handleError("Load member overview", e);
         }
       },
     }),

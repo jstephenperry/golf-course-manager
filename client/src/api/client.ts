@@ -5,6 +5,7 @@ import type {
   MaintenanceTask,
   Member,
   MemberApplication,
+  MemberOverview,
   PaymentMethod,
   PlayerTab,
   Product,
@@ -95,6 +96,8 @@ export const api = {
       request<Member>("POST", `/members/${id}/suspend`, { reviewer: null, note: note ?? "" }),
     reinstate: (id: string) =>
       request<Member>("POST", `/members/${id}/reinstate`),
+    getOverview: (id: string) =>
+      request<MemberOverview>("GET", `/members/${id}/overview`),
   },
   applications: {
     ...resource<MemberApplication>("/applications"),

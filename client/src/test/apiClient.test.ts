@@ -49,6 +49,30 @@ describe("api client", () => {
     }
   });
 
+  it("getOverview GETs /api/members/:id/overview and returns parsed body", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          member: { id: "m1", firstName: "E", lastName: "P" },
+          lastPlayedDate: "2026-05-09",
+          lifetimeRounds: 3,
+          recentRounds: [],
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      ),
+    );
+    const overview = await api.members.getOverview("m1");
+    expect(overview.lifetimeRounds).toBe(3);
+    expect(overview.lastPlayedDate).toBe("2026-05-09");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/members/m1/overview",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
   it("encodes JSON body on POST", async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ id: "m1" }), {
@@ -69,6 +93,7 @@ describe("api client", () => {
       status: "Active",
       oldestUnpaidChargeAt: null,
       suspendedAt: null,
+      notes: "",
     });
     const call = fetchMock.mock.calls[0]!;
     expect(call[0]).toBe("/api/members");

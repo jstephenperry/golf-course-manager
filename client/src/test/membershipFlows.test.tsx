@@ -37,6 +37,7 @@ const seedMember = (overrides: Partial<Member> = {}): Member => ({
   status: "Active",
   oldestUnpaidChargeAt: null,
   suspendedAt: null,
+  notes: "",
   ...overrides,
 });
 

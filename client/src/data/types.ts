@@ -16,6 +16,14 @@ export interface Member {
   status: MemberStatus;
   oldestUnpaidChargeAt: string | null;
   suspendedAt: string | null;
+  notes: string;
+}
+
+export interface MemberOverview {
+  member: Member;
+  lastPlayedDate: string | null;
+  lifetimeRounds: number;
+  recentRounds: TeeTime[];
 }
 
 export type ApplicationStatus =

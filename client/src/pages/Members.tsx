@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { Modal } from "../components/Modal";
 import { useToaster } from "../components/Toaster";
 import { useStore } from "../data/store";
@@ -27,6 +28,7 @@ const blankMember = (): Omit<Member, "id"> => ({
   status: "Active",
   oldestUnpaidChargeAt: null,
   suspendedAt: null,
+  notes: "",
 });
 
 const blankApplication = (): Omit<MemberApplication, "id"> => ({
@@ -338,9 +340,14 @@ export function Members() {
                   return (
                     <tr key={m.id}>
                       <td>
-                        <strong>
-                          {m.firstName} {m.lastName}
-                        </strong>
+                        <Link
+                          to={`/members/${m.id}`}
+                          className="member-name-link"
+                        >
+                          <strong>
+                            {m.firstName} {m.lastName}
+                          </strong>
+                        </Link>
                       </td>
                       <td>
                         <span

@@ -14,6 +14,9 @@ const TeeTimes = lazy(() =>
 const Members = lazy(() =>
   import("./pages/Members").then((m) => ({ default: m.Members })),
 );
+const MemberDetail = lazy(() =>
+  import("./pages/MemberDetail").then((m) => ({ default: m.MemberDetail })),
+);
 const Courses = lazy(() =>
   import("./pages/Courses").then((m) => ({ default: m.Courses })),
 );
@@ -70,6 +73,14 @@ export default function App() {
                 element={
                   <Suspense fallback={<PageFallback />}>
                     <Members />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="members/:memberId"
+                element={
+                  <Suspense fallback={<PageFallback />}>
+                    <MemberDetail />
                   </Suspense>
                 }
               />
