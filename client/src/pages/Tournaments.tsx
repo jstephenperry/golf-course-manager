@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Modal } from "../components/Modal";
 import { useToaster } from "../components/Toaster";
 import { useStore } from "../data/store";
+import { isPlayable } from "../data/courseDerived";
 import type { Tournament } from "../data/types";
 
 const FORMATS: Tournament["format"][] = [
@@ -27,7 +28,7 @@ export function Tournaments() {
   const { data, tournaments: api } = useStore();
   const toaster = useToaster();
   const [busy, setBusy] = useState(false);
-  const playable = data.courses.filter((c) => c.holes > 0);
+  const playable = data.courses.filter(isPlayable);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Tournament | null>(null);
   const [form, setForm] = useState<Omit<Tournament, "id">>(

@@ -72,6 +72,7 @@ app.UseStaticFiles();
 
 // ---------- Routes ----------
 app.MapAll();
+app.MapNines();
 app.MapTabs();
 app.MapMembership();
 app.MapMemberOverview();

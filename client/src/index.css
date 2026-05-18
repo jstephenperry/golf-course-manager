@@ -617,6 +617,27 @@ textarea {
 .modal.tab-modal {
   max-width: 980px;
 }
+.modal.wide {
+  max-width: 1180px;
+}
+
+/* Compact table inputs — used by the Nine editor's hole grid so 9 holes
+   × N tee sets fit without horizontal scroll on a typical viewport. */
+.modal.wide .table.compact th,
+.modal.wide .table.compact td {
+  padding: 4px 6px;
+}
+.modal.wide .table.compact .input {
+  padding: 4px 6px;
+  height: auto;
+  width: 100%;
+  min-width: 0;
+  text-align: right;
+}
+.modal.wide .table.compact .input[type="color"] {
+  padding: 0;
+  height: 28px;
+}
 @media (max-width: 900px) {
   .modal.tab-modal .modal-body .grid.cols-2 {
     grid-template-columns: 1fr;

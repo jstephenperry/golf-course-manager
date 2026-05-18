@@ -33,19 +33,72 @@ public class Member
     public string Notes { get; set; } = string.Empty;
 }
 
+// A "Course" is now an assembled playable round — references a front Nine
+// (required for a playable course) and an optional back Nine. Total holes,
+// par and yardage are derived from the referenced Nines and are not stored.
+// Rating/Slope remain stored as optional aggregate values for the default
+// tee set; per-tee ratings can be elevated later if needed.
 public class Course
 {
     [Key] public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
-    public int Holes { get; set; }
-    public int Par { get; set; }
-    public int Yardage { get; set; }
+    public string? FrontNineId { get; set; }
+    public string? BackNineId { get; set; }
     public double Rating { get; set; }
     public int Slope { get; set; }
     public string Status { get; set; } = "Open";
     public string OpenTime { get; set; } = "06:00";
     public string CloseTime { get; set; } = "18:00";
     public string Notes { get; set; } = string.Empty;
+}
+
+// A Nine is a playable unit of nine holes. Nines are independent of
+// Courses — the same Nine can be the front of one Course and the back
+// of another (e.g., Winstar's Oak + Redbud vs. Oak + Pecan).
+public class Nine
+{
+    [Key] public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string Notes { get; set; } = string.Empty;
+
+    public List<NineTeeSet> TeeSets { get; set; } = new();
+    public List<Hole> Holes { get; set; } = new();
+}
+
+// One named set of tees on a Nine (e.g., "Black", "Blue", "White", "Red").
+// Hole yardages reference these by Id so the tee list stays consistent
+// across every hole in the Nine.
+public class NineTeeSet
+{
+    [Key] public string Id { get; set; } = string.Empty;
+    public string NineId { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Color { get; set; } = string.Empty;
+    public int SortOrder { get; set; }
+}
+
+public class Hole
+{
+    [Key] public string Id { get; set; } = string.Empty;
+    public string NineId { get; set; } = string.Empty;
+    // 1..9 within the owning Nine.
+    public int Number { get; set; }
+    public int Par { get; set; } = 4;
+    // Hole handicap stroke index, 1..9 within the Nine.
+    public int HandicapIndex { get; set; }
+    public string Notes { get; set; } = string.Empty;
+
+    public List<HoleYardage> Yardages { get; set; } = new();
+}
+
+// Per-tee yardage for a single hole. (HoleId, TeeSetId) is unique.
+public class HoleYardage
+{
+    [Key] public string Id { get; set; } = string.Empty;
+    public string HoleId { get; set; } = string.Empty;
+    public string TeeSetId { get; set; } = string.Empty;
+    public int Yards { get; set; }
 }
 
 public class TeeTime

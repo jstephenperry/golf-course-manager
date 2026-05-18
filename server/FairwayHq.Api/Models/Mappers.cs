@@ -61,15 +61,32 @@ public static class Mappers
     }
 
     public static CourseDto ToDto(this Course c) =>
-        new(c.Id, c.Name, c.Holes, c.Par, c.Yardage, c.Rating, c.Slope,
+        new(c.Id, c.Name, c.FrontNineId, c.BackNineId, c.Rating, c.Slope,
             c.Status, c.OpenTime, c.CloseTime, c.Notes);
 
     public static void Apply(this Course c, CourseDto d)
     {
-        c.Name = d.Name; c.Holes = d.Holes; c.Par = d.Par; c.Yardage = d.Yardage;
+        c.Name = d.Name;
+        c.FrontNineId = string.IsNullOrWhiteSpace(d.FrontNineId) ? null : d.FrontNineId;
+        c.BackNineId = string.IsNullOrWhiteSpace(d.BackNineId) ? null : d.BackNineId;
         c.Rating = d.Rating; c.Slope = d.Slope; c.Status = d.Status;
         c.OpenTime = d.OpenTime; c.CloseTime = d.CloseTime; c.Notes = d.Notes;
     }
+
+    public static NineTeeSetDto ToDto(this NineTeeSet t) =>
+        new(t.Id, t.NineId, t.Name, t.Color, t.SortOrder);
+
+    public static HoleYardageDto ToDto(this HoleYardage y) =>
+        new(y.Id, y.HoleId, y.TeeSetId, y.Yards);
+
+    public static HoleDto ToDto(this Hole h) =>
+        new(h.Id, h.NineId, h.Number, h.Par, h.HandicapIndex, h.Notes,
+            h.Yardages.OrderBy(y => y.TeeSetId).Select(y => y.ToDto()).ToList());
+
+    public static NineDto ToDto(this Nine n) =>
+        new(n.Id, n.Name, n.Description, n.Notes,
+            n.TeeSets.OrderBy(t => t.SortOrder).ThenBy(t => t.Name).Select(t => t.ToDto()).ToList(),
+            n.Holes.OrderBy(h => h.Number).Select(h => h.ToDto()).ToList());
 
     public static TeeTimeDto ToDto(this TeeTime t) =>
         new(t.Id, t.Date, t.Time, t.CourseId, ParseList(t.PlayersJson),

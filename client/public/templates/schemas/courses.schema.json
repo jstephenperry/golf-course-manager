@@ -10,9 +10,14 @@
     "properties": {
       "id": { "type": "string", "description": "Optional; auto-generated as crs_<12hex>." },
       "name": { "type": "string", "minLength": 1 },
-      "holes": { "type": "integer", "minimum": 0 },
-      "par": { "type": "integer", "minimum": 0 },
-      "yardage": { "type": "integer", "minimum": 0 },
+      "frontNineId": {
+        "type": ["string", "null"],
+        "description": "Optional FK → Nine.id. Required for a course to be playable (show in tee sheet / tournament selectors). If set, that Nine must already exist."
+      },
+      "backNineId": {
+        "type": ["string", "null"],
+        "description": "Optional FK → Nine.id. Omit for 9-hole courses; set for 18-hole courses. If set, that Nine must already exist."
+      },
       "rating": { "type": "number" },
       "slope": { "type": "integer" },
       "status": { "enum": ["Open", "Closed", "Cart Path Only"] },

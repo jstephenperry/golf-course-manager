@@ -7,6 +7,9 @@ interface Props {
   submitLabel?: string;
   children: ReactNode;
   hideFooter?: boolean;
+  // Width preset: "default" matches the standard dialog; "wide" gives
+  // tabular editors enough room to lay out 9+ columns without scrolling.
+  size?: "default" | "wide";
 }
 
 export function Modal({
@@ -16,6 +19,7 @@ export function Modal({
   submitLabel = "Save",
   children,
   hideFooter,
+  size = "default",
 }: Props) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -27,7 +31,10 @@ export function Modal({
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
-      <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
+      <div
+        className={`modal${size === "wide" ? " wide" : ""}`}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <div className="modal-header">
           <h3>{title}</h3>
           <button className="btn ghost" onClick={onClose} aria-label="Close">

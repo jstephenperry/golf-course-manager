@@ -81,18 +81,54 @@ public record VoidLedgerEntryDto(string Note);
 
 public record DunningRunResultDto(int Suspended, int Reinstated, string[] AffectedMemberIds);
 
+// Courses are an assembled round of one or two Nines. Holes/Par/Yardage
+// are derived from the referenced Nines on the client and are not part
+// of the DTO.
 public record CourseDto(
     string Id,
     string Name,
-    int Holes,
-    int Par,
-    int Yardage,
+    string? FrontNineId,
+    string? BackNineId,
     double Rating,
     int Slope,
     string Status,
     string OpenTime,
     string CloseTime,
     string Notes
+);
+
+public record HoleYardageDto(
+    string Id,
+    string HoleId,
+    string TeeSetId,
+    int Yards
+);
+
+public record HoleDto(
+    string Id,
+    string NineId,
+    int Number,
+    int Par,
+    int HandicapIndex,
+    string Notes,
+    List<HoleYardageDto> Yardages
+);
+
+public record NineTeeSetDto(
+    string Id,
+    string NineId,
+    string Name,
+    string Color,
+    int SortOrder
+);
+
+public record NineDto(
+    string Id,
+    string Name,
+    string Description,
+    string Notes,
+    List<NineTeeSetDto> TeeSets,
+    List<HoleDto> Holes
 );
 
 public record TeeTimeDto(
@@ -219,7 +255,12 @@ public record DataSnapshot(
     List<MaintenanceTaskDto> Maintenance,
     List<PlayerTabDto> Tabs,
     List<MemberApplicationDto> MemberApplications,
-    List<MemberLedgerEntryDto>? LedgerEntries = null
+    List<MemberLedgerEntryDto>? LedgerEntries = null,
+    // Nullable so pre-v2 backup snapshots restore cleanly; restore handler
+    // coerces null → empty list. The Nines own their tee sets, holes, and
+    // hole yardages — those are nested inside NineDto and don't need
+    // top-level snapshot lists.
+    List<NineDto>? Nines = null
 );
 
 // Body for tab payment posting (auto-stamped PaidAt server-side).

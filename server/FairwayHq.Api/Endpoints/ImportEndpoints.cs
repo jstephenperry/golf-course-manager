@@ -20,7 +20,13 @@ public static class ImportEndpoints
                 Results.Ok(await ImportMembers(db, rows))
         ).WithTags("Import");
 
-        // ----- courses
+        // ----- nines (owns nested tee sets + holes + per-tee yardages)
+        app.MapPost("/api/import/nines",
+            async (List<NineDto> rows, AppDbContext db) =>
+                Results.Ok(await ImportNines(db, rows))
+        ).WithTags("Import");
+
+        // ----- courses (FK: FrontNineId, BackNineId — both optional)
         app.MapPost("/api/import/courses",
             async (List<CourseDto> rows, AppDbContext db) =>
                 Results.Ok(await ImportCourses(db, rows))
@@ -95,6 +101,9 @@ public static class ImportEndpoints
     private static async Task<ImportResult> ImportCourses(AppDbContext db, List<CourseDto> rows)
     {
         var existing = (await db.Courses.AsNoTracking().Select(x => x.Id).ToListAsync()).ToHashSet();
+        // Nine FKs are checked against rows already committed to the DB —
+        // import Nines first if a Course references them.
+        var nineIds = (await db.Nines.AsNoTracking().Select(x => x.Id).ToListAsync()).ToHashSet();
         var (created, skipped, errors) = (0, 0, new List<ImportRowError>());
         await using var tx = await db.Database.BeginTransactionAsync();
         for (var i = 0; i < rows.Count; i++)
@@ -102,12 +111,102 @@ public static class ImportEndpoints
             var r = rows[i];
             if (string.IsNullOrWhiteSpace(r.Name))
             { errors.Add(new(i, r.Id, "required_field_missing", "Name required")); continue; }
+            if (!string.IsNullOrEmpty(r.FrontNineId) && !nineIds.Contains(r.FrontNineId))
+            { errors.Add(new(i, r.Id, "fk_missing", $"FrontNineId {r.FrontNineId} not found")); continue; }
+            if (!string.IsNullOrEmpty(r.BackNineId) && !nineIds.Contains(r.BackNineId))
+            { errors.Add(new(i, r.Id, "fk_missing", $"BackNineId {r.BackNineId} not found")); continue; }
             if (!string.IsNullOrEmpty(r.Id) && existing.Contains(r.Id))
             { skipped++; errors.Add(new(i, r.Id, "id_exists")); continue; }
             var e = new Course { Id = string.IsNullOrEmpty(r.Id) ? NewId("crs") : r.Id };
             e.Apply(r);
             db.Courses.Add(e);
             existing.Add(e.Id);
+            created++;
+        }
+        await db.SaveChangesAsync();
+        await tx.CommitAsync();
+        return new(created, skipped, errors);
+    }
+
+    private static async Task<ImportResult> ImportNines(AppDbContext db, List<NineDto> rows)
+    {
+        var existing = (await db.Nines.AsNoTracking().Select(x => x.Id).ToListAsync()).ToHashSet();
+        var (created, skipped, errors) = (0, 0, new List<ImportRowError>());
+        await using var tx = await db.Database.BeginTransactionAsync();
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var r = rows[i];
+            if (string.IsNullOrWhiteSpace(r.Name))
+            { errors.Add(new(i, r.Id, "required_field_missing", "Name required")); continue; }
+            if (r.Holes is null || r.Holes.Count != 9)
+            { errors.Add(new(i, r.Id, "invalid_hole_count", "A nine must include exactly 9 holes")); continue; }
+            // Hole numbers must be the set {1..9}; the Nine editor in
+            // the UI guarantees this, but uploaded files have not been
+            // through it so we verify here.
+            var nums = r.Holes.Select(h => h.Number).OrderBy(n => n).ToList();
+            if (!nums.SequenceEqual(Enumerable.Range(1, 9)))
+            { errors.Add(new(i, r.Id, "invalid_hole_numbers", "Hole numbers must be 1..9")); continue; }
+            if (!string.IsNullOrEmpty(r.Id) && existing.Contains(r.Id))
+            { skipped++; errors.Add(new(i, r.Id, "id_exists")); continue; }
+
+            var nineId = string.IsNullOrEmpty(r.Id) ? NewId("nin") : r.Id;
+            var n = new Nine
+            {
+                Id = nineId,
+                Name = r.Name,
+                Description = r.Description ?? string.Empty,
+                Notes = r.Notes ?? string.Empty
+            };
+
+            // Build a tee-id remap so user-supplied (or blank) tee-set
+            // ids on the inbound DTO resolve to the persisted ids that
+            // HoleYardage rows will reference.
+            var teeIdMap = new Dictionary<string, string>(StringComparer.Ordinal);
+            var order = 0;
+            foreach (var t in r.TeeSets ?? new List<NineTeeSetDto>())
+            {
+                var teeId = string.IsNullOrEmpty(t.Id) ? NewId("nts") : t.Id;
+                if (!string.IsNullOrEmpty(t.Id)) teeIdMap[t.Id] = teeId;
+                n.TeeSets.Add(new NineTeeSet
+                {
+                    Id = teeId,
+                    NineId = nineId,
+                    Name = t.Name ?? string.Empty,
+                    Color = t.Color ?? string.Empty,
+                    SortOrder = t.SortOrder == 0 ? order : t.SortOrder
+                });
+                order++;
+            }
+
+            foreach (var h in r.Holes)
+            {
+                var holeId = string.IsNullOrEmpty(h.Id) ? NewId("hol") : h.Id;
+                var hole = new Hole
+                {
+                    Id = holeId,
+                    NineId = nineId,
+                    Number = h.Number,
+                    Par = h.Par,
+                    HandicapIndex = h.HandicapIndex,
+                    Notes = h.Notes ?? string.Empty
+                };
+                foreach (var y in h.Yardages ?? new List<HoleYardageDto>())
+                {
+                    if (!teeIdMap.TryGetValue(y.TeeSetId, out var teeId))
+                        teeId = y.TeeSetId;
+                    if (string.IsNullOrEmpty(teeId)) continue;
+                    hole.Yardages.Add(new HoleYardage
+                    {
+                        Id = string.IsNullOrEmpty(y.Id) ? NewId("hyd") : y.Id,
+                        HoleId = holeId,
+                        TeeSetId = teeId,
+                        Yards = y.Yards
+                    });
+                }
+                n.Holes.Add(hole);
+            }
+            db.Nines.Add(n);
+            existing.Add(nineId);
             created++;
         }
         await db.SaveChangesAsync();

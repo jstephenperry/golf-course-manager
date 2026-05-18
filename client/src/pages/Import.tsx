@@ -14,10 +14,18 @@ interface EntityRow {
 
 const ENTITIES: EntityRow[] = [
   {
+    key: "nines",
+    label: "Nines",
+    templateFile: "nines.template.json",
+    importer: api.import.nines,
+    note: "Each row owns its tee sets, 9 holes, and per-tee yardages.",
+  },
+  {
     key: "courses",
     label: "Courses",
     templateFile: "courses.template.json",
     importer: api.import.courses,
+    note: "Optional FKs to Nines (FrontNineId, BackNineId) — import Nines first.",
   },
   {
     key: "staff",

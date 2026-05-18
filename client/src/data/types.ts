@@ -112,18 +112,55 @@ export interface DunningRunResult {
   affectedMemberIds: string[];
 }
 
+// A Course is an assembled bookable round: front Nine (required to be
+// playable) + optional back Nine. Total holes / par / yardage are
+// derived from the referenced Nines on the client — see
+// data/courseDerived.ts.
 export interface Course {
   id: string;
   name: string;
-  holes: number;
-  par: number;
-  yardage: number;
+  frontNineId: string | null;
+  backNineId: string | null;
   rating: number;
   slope: number;
   status: "Open" | "Closed" | "Cart Path Only";
   openTime: string;
   closeTime: string;
   notes: string;
+}
+
+export interface NineTeeSet {
+  id: string;
+  nineId: string;
+  name: string;
+  color: string;
+  sortOrder: number;
+}
+
+export interface HoleYardage {
+  id: string;
+  holeId: string;
+  teeSetId: string;
+  yards: number;
+}
+
+export interface Hole {
+  id: string;
+  nineId: string;
+  number: number;
+  par: number;
+  handicapIndex: number;
+  notes: string;
+  yardages: HoleYardage[];
+}
+
+export interface Nine {
+  id: string;
+  name: string;
+  description: string;
+  notes: string;
+  teeSets: NineTeeSet[];
+  holes: Hole[];
 }
 
 export interface TeeTime {
@@ -271,6 +308,7 @@ export interface PlayerTab {
 export interface DataState {
   members: Member[];
   courses: Course[];
+  nines: Nine[];
   teeTimes: TeeTime[];
   staff: StaffMember[];
   shifts: Shift[];

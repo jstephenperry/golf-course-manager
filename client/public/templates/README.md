@@ -10,15 +10,22 @@ Validation strategy: each row is checked individually. Valid rows commit; invali
 
 Foreign-key validation looks at **existing** data only — it does not resolve refs against rows arriving in the same batch (or in a separate batch that hasn't been committed yet). Import in this order:
 
-1. `courses.template.json`
-2. `staff.template.json`
-3. `products.template.json`
-4. `members.template.json`
-5. `tee-times.template.json` (FK → `courses`)
-6. `tournaments.template.json` (FK → `courses`)
-7. `maintenance.template.json` (FK → `courses`, `staff`; both optional)
-8. `shifts.template.json` (FK → `staff`)
-9. `weekly-templates.template.json` (FK → `staff`)
+1. `nines.template.json`
+2. `courses.template.json` (FK → `nines`; both `frontNineId` and `backNineId` optional)
+3. `staff.template.json`
+4. `products.template.json`
+5. `members.template.json`
+6. `tee-times.template.json` (FK → `courses`)
+7. `tournaments.template.json` (FK → `courses`)
+8. `maintenance.template.json` (FK → `courses`, `staff`; both optional)
+9. `shifts.template.json` (FK → `staff`)
+10. `weekly-templates.template.json` (FK → `staff`)
+
+### A note on Nines
+
+A **Nine** is a playable unit of exactly 9 holes — the building block for Courses. Each row in `nines.template.json` is self-contained: it owns its tee sets, its 9 holes (numbered 1..9), and per-tee yardages for every hole. Tee-set ids you provide are local to that row and get remapped to persisted ids on import — they only need to be unique within their parent Nine and match the `teeSetId` values used by the hole yardages.
+
+A **Course** is then an assembled bookable round: a front Nine (required for the course to appear in tee sheets / tournaments) and an optional back Nine for an 18-hole round. Total holes, par, and yardages are derived from the referenced Nines — they're computed on the client and not stored on the Course.
 
 ## JSON Schemas
 

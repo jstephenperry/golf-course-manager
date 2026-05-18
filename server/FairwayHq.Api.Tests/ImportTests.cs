@@ -95,7 +95,7 @@ public class ImportTests : IClassFixture<ApiFactory>
         var courseId = UniqueId("crs");
         await client.PostAsJsonAsync("/api/import/courses", new[]
         {
-            new CourseDto(courseId, "Imported Course", 18, 72, 6500, 70.0, 130, "Open", "06:00", "18:00", ""),
+            new CourseDto(courseId, "Imported Course", null, null, 70.0, 130, "Open", "06:00", "18:00", ""),
         });
 
         var teeId = UniqueId("tee");
@@ -123,7 +123,7 @@ public class ImportTests : IClassFixture<ApiFactory>
         var courseId = UniqueId("crs");
         var courseRes = await client.PostAsJsonAsync("/api/import/courses", new[]
         {
-            new CourseDto(courseId, "Imported Course", 9, 35, 3000, 35.0, 120, "Open", "07:00", "17:00", ""),
+            new CourseDto(courseId, "Imported Course", null, null, 35.0, 120, "Open", "07:00", "17:00", ""),
         });
         var cr = await courseRes.Content.ReadFromJsonAsync<ImportEndpoints.ImportResult>();
         Assert.Equal(1, cr!.Created);

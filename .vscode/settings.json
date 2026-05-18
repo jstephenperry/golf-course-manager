@@ -9,6 +9,10 @@
       "url": "./client/public/templates/schemas/courses.schema.json"
     },
     {
+      "fileMatch": ["client/public/templates/nines.template.json"],
+      "url": "./client/public/templates/schemas/nines.schema.json"
+    },
+    {
       "fileMatch": ["client/public/templates/products.template.json"],
       "url": "./client/public/templates/schemas/products.schema.json"
     },

@@ -36,6 +36,15 @@ public static class OpsEndpoints
             db.Staff.RemoveRange(db.Staff);
             db.TeeTimes.RemoveRange(db.TeeTimes);
             db.Courses.RemoveRange(db.Courses);
+            // Drop nine + nested children. Order matters: courses (above)
+            // reference Nines via FrontNineId/BackNineId with Restrict,
+            // so Courses must clear first. HoleYardages/Holes/TeeSets are
+            // cascade-deleted with the parent Nine, but draining them
+            // explicitly keeps the change-tracker shallow.
+            db.HoleYardages.RemoveRange(db.HoleYardages);
+            db.Holes.RemoveRange(db.Holes);
+            db.NineTeeSets.RemoveRange(db.NineTeeSets);
+            db.Nines.RemoveRange(db.Nines);
             db.MemberApplications.RemoveRange(db.MemberApplications);
             db.Members.RemoveRange(db.Members);
             await db.SaveChangesAsync();
@@ -49,6 +58,43 @@ public static class OpsEndpoints
             {
                 var e = new MemberApplication { Id = d.Id };
                 e.Apply(d); db.MemberApplications.Add(e);
+            }
+            // Restore Nines (with nested tee sets, holes, yardages) before
+            // Courses so the FrontNineId/BackNineId FKs resolve.
+            foreach (var d in body.Nines ?? new List<NineDto>())
+            {
+                var n = new Nine
+                {
+                    Id = d.Id, Name = d.Name,
+                    Description = d.Description, Notes = d.Notes
+                };
+                foreach (var t in d.TeeSets)
+                {
+                    n.TeeSets.Add(new NineTeeSet
+                    {
+                        Id = t.Id, NineId = d.Id, Name = t.Name,
+                        Color = t.Color, SortOrder = t.SortOrder
+                    });
+                }
+                foreach (var h in d.Holes)
+                {
+                    var hole = new Hole
+                    {
+                        Id = h.Id, NineId = d.Id, Number = h.Number,
+                        Par = h.Par, HandicapIndex = h.HandicapIndex,
+                        Notes = h.Notes
+                    };
+                    foreach (var y in h.Yardages)
+                    {
+                        hole.Yardages.Add(new HoleYardage
+                        {
+                            Id = y.Id, HoleId = h.Id,
+                            TeeSetId = y.TeeSetId, Yards = y.Yards
+                        });
+                    }
+                    n.Holes.Add(hole);
+                }
+                db.Nines.Add(n);
             }
             foreach (var d in body.Courses)
             {
@@ -160,6 +206,11 @@ public static class OpsEndpoints
     {
         var tabs = await db.Tabs.Include(t => t.Items).Include(t => t.Payments)
             .AsNoTracking().ToListAsync();
+        var nines = await db.Nines
+            .Include(n => n.TeeSets)
+            .Include(n => n.Holes).ThenInclude(h => h.Yardages)
+            .AsNoTracking()
+            .ToListAsync();
         return new DataSnapshot(
             (await db.Members.AsNoTracking().ToListAsync()).Select(m => m.ToDto()).ToList(),
             (await db.Courses.AsNoTracking().ToListAsync()).Select(c => c.ToDto()).ToList(),
@@ -172,7 +223,8 @@ public static class OpsEndpoints
             (await db.Maintenance.AsNoTracking().ToListAsync()).Select(m => m.ToDto()).ToList(),
             tabs.Select(t => t.ToDto()).ToList(),
             (await db.MemberApplications.AsNoTracking().ToListAsync()).Select(a => a.ToDto()).ToList(),
-            (await db.MemberLedgerEntries.AsNoTracking().ToListAsync()).Select(e => e.ToDto()).ToList()
+            (await db.MemberLedgerEntries.AsNoTracking().ToListAsync()).Select(e => e.ToDto()).ToList(),
+            nines.Select(n => n.ToDto()).ToList()
         );
     }
 
@@ -189,7 +241,12 @@ public static class OpsEndpoints
         db.Shifts.RemoveRange(db.Shifts);
         db.Staff.RemoveRange(db.Staff);
         db.TeeTimes.RemoveRange(db.TeeTimes);
+        // Courses reference Nines with Restrict — drop courses first.
         db.Courses.RemoveRange(db.Courses);
+        db.HoleYardages.RemoveRange(db.HoleYardages);
+        db.Holes.RemoveRange(db.Holes);
+        db.NineTeeSets.RemoveRange(db.NineTeeSets);
+        db.Nines.RemoveRange(db.Nines);
         db.MemberApplications.RemoveRange(db.MemberApplications);
         db.Members.RemoveRange(db.Members);
         await db.SaveChangesAsync();

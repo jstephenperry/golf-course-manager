@@ -9,6 +9,7 @@ import type {
   MemberLedgerEntry,
   MemberLedgerList,
   MemberOverview,
+  Nine,
   PaymentMethod,
   PlayerTab,
   Product,
@@ -150,6 +151,7 @@ export const api = {
     run: () => request<DunningRunResult>("POST", "/dunning/run"),
   },
   courses: resource<Course>("/courses"),
+  nines: resource<Nine>("/nines"),
   teeTimes: resource<TeeTime>("/tee-times"),
   staff: resource<StaffMember>("/staff"),
   shifts: resource<Shift>("/shifts"),
@@ -199,6 +201,7 @@ export const api = {
 
   import: {
     members: (rows: unknown[]) => request<ImportResult>("POST", "/import/members", rows),
+    nines: (rows: unknown[]) => request<ImportResult>("POST", "/import/nines", rows),
     courses: (rows: unknown[]) => request<ImportResult>("POST", "/import/courses", rows),
     teeTimes: (rows: unknown[]) => request<ImportResult>("POST", "/import/tee-times", rows),
     staff: (rows: unknown[]) => request<ImportResult>("POST", "/import/staff", rows),

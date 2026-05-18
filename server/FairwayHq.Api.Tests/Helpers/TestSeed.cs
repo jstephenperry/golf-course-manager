@@ -54,10 +54,13 @@ public static class TestSeed
         var courseIds = existingCourses.Select(c => c.Id).ToHashSet();
         if (!courseIds.Contains(ChampionshipCourseId))
         {
+            // Tests don't exercise the Nine/Hole structure yet — the
+            // bookable Course is created without nine references; UI flows
+            // that require an assembled course will set FrontNineId later.
             await PostOrThrow(client, "/api/courses", new CourseDto(
                 Id: ChampionshipCourseId,
                 Name: "Championship Course",
-                Holes: 18, Par: 72, Yardage: 7124,
+                FrontNineId: null, BackNineId: null,
                 Rating: 74.2, Slope: 138,
                 Status: "Open",
                 OpenTime: "06:00", CloseTime: "18:00",

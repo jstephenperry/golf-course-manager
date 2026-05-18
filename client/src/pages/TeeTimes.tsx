@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Modal } from "../components/Modal";
 import { useToaster } from "../components/Toaster";
 import { useStore } from "../data/store";
+import { isPlayable } from "../data/courseDerived";
 import type { TeeTime } from "../data/types";
 import {
   TEE_SLOT_INTERVAL_MIN,
@@ -39,7 +40,7 @@ export function TeeTimes() {
   const toaster = useToaster();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
-  const playableCourses = data.courses.filter((c) => c.holes > 0);
+  const playableCourses = data.courses.filter(isPlayable);
 
   const [date, setDate] = useState(todayIso());
   const [courseId, setCourseId] = useState(playableCourses[0]?.id ?? "");
@@ -180,7 +181,7 @@ export function TeeTimes() {
   if (playableCourses.length === 0) {
     return (
       <div className="card empty">
-        Add a playable course (with holes &gt; 0) to begin booking tee times.
+        Assemble a course (assign a front nine) to begin booking tee times.
       </div>
     );
   }

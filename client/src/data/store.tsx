@@ -20,6 +20,7 @@ import type {
   MemberLedgerEntry,
   MemberLedgerList,
   MemberOverview,
+  Nine,
   PaymentMethod,
   PlayerTab,
   Product,
@@ -33,6 +34,7 @@ import type {
 export const EMPTY_DATA: DataState = {
   members: [],
   courses: [],
+  nines: [],
   teeTimes: [],
   staff: [],
   shifts: [],
@@ -47,6 +49,7 @@ export const EMPTY_DATA: DataState = {
 type CollectionKey =
   | "members"
   | "courses"
+  | "nines"
   | "teeTimes"
   | "staff"
   | "shifts"
@@ -138,6 +141,7 @@ interface StoreApi {
     withdraw: (id: string) => Promise<MemberApplication | null>;
   };
   courses: ResourceActions<Course>;
+  nines: ResourceActions<Nine>;
   teeTimes: ResourceActions<TeeTime>;
   staff: ResourceActions<StaffMember>;
   shifts: ResourceActions<Shift>;
@@ -196,6 +200,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setData({
         members: snap.members ?? [],
         courses: snap.courses ?? [],
+        // The /api/snapshot endpoint doesn't include nines; load them
+        // alongside the snapshot so the courses page can render
+        // assembled-round totals.
+        nines: [],
         teeTimes: snap.teeTimes ?? [],
         staff: snap.staff ?? [],
         shifts: snap.shifts ?? [],
@@ -206,6 +214,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         tabs: snap.tabs ?? [],
         memberApplications: snap.memberApplications ?? [],
       });
+      // Pull the full nine structure separately — keeping the snapshot
+      // endpoint's shape backwards-compatible.
+      try {
+        const nines = await api.nines.list();
+        setData((prev) => ({ ...prev, nines }));
+      } catch (e) {
+        console.error("[store] load nines failed", e);
+      }
       setError(null);
       setInitialized(true);
     } catch (err) {
@@ -467,6 +483,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
   const courses = useMemo(
     () => makeResource<Course, "courses">("courses", api.courses, "course"),
+    [makeResource],
+  );
+  const nines = useMemo(
+    () => makeResource<Nine, "nines">("nines", api.nines, "nine"),
     [makeResource],
   );
   const teeTimes = useMemo(
@@ -734,6 +754,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       members,
       applications,
       courses,
+      nines,
       teeTimes,
       staff,
       shifts,
@@ -757,6 +778,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       members,
       applications,
       courses,
+      nines,
       teeTimes,
       staff,
       shifts,
