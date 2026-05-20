@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build*)",
+      "Bash(dotnet test*)",
+      "Bash(npm run typecheck)",
+      "Bash(npm run build)",
+      "Bash(npm test)",
+      "Bash(just typecheck)",
+      "Bash(just test)",
+      "Bash(just test-server)",
+      "Bash(just test-client)",
+      "Bash(just build)",
+      "Bash(just ci)",
+      "Bash(podman compose build*)",
+      "Bash(podman compose up*)",
+      "Bash(podman compose restart*)",
+      "Bash(podman logs*)",
+      "Bash(podman ps*)",
+      "Bash(podman inspect*)",
+      "Bash(curl -sk https://localhost:8443/*)",
+      "Bash(curl -sk https://localhost:8081/*)"
+    ]
+  }
+}
