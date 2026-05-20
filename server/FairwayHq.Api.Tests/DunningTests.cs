@@ -104,28 +104,20 @@ public class DunningTests : IClassFixture<ApiFactory>
 
         var client = _factory.CreateClient();
         await TestSeed.MinimalAsync(client);
-        // Manual reinstate via endpoint requires balance to be zeroed first.
-        // We do it by posting a Card payment that doesn't touch member balance —
-        // instead, simulate the member paying their account directly via the
-        // direct reinstate endpoint after we zero them through the API.
-        // Easiest: call /reinstate after manually nulling balance via a member PUT.
-        var put = await client.PutAsJsonAsync($"/api/members/mbr_F8jRn2KwHt", new
+
+        // A3: member balance can no longer be zeroed via a raw PUT (mass
+        // assignment is gone). Zero it through the ledger ground-truth path
+        // directly in the harness, keeping the member Suspended so the
+        // dunning sweep is the thing that performs the defensive reinstate.
+        using (var setupScope = _factory.Services.CreateScope())
         {
-            id = "mbr_F8jRn2KwHt",
-            firstName = m.FirstName,
-            lastName = m.LastName,
-            email = m.Email,
-            phone = m.Phone,
-            tier = m.Tier,
-            handicap = m.Handicap,
-            joinDate = m.JoinDate,
-            active = false,
-            balance = 0m,
-            status = "Suspended",
-            oldestUnpaidChargeAt = (string?)null,
-            suspendedAt = m.SuspendedAt
-        });
-        put.EnsureSuccessStatusCode();
+            var setupDb = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var member = await setupDb.Members.FindAsync("mbr_F8jRn2KwHt");
+            member!.Balance = 0m;
+            member.OldestUnpaidChargeAt = null;
+            // Stays Suspended on purpose; dunning's defensive reinstate fires.
+            await setupDb.SaveChangesAsync();
+        }
 
         var res = await client.PostAsync("/api/dunning/run", null);
         var result = await res.Content.ReadFromJsonAsync<DunningRunResultDto>();

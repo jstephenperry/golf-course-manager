@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { ApiError, api } from "../api/client";
+import { useOptionalAuth } from "../auth/AuthContext";
 import { useToaster } from "../components/Toaster";
 import type {
   Course,
@@ -165,6 +166,13 @@ const StoreContext = createContext<StoreApi | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const toaster = useToaster();
+  const auth = useOptionalAuth();
+  // Only hit the API when we're allowed to: either auth is disabled
+  // (local dev / tests with no OIDC config) or the user is signed in.
+  // Fetching while auth is enabled-but-unauthenticated produces a 401 that
+  // triggers a silent renew on every request — a renewal storm before the
+  // user has even logged in. Gate it here.
+  const shouldFetch = auth ? !auth.isEnabled || auth.isAuthenticated : true;
   const [data, setData] = useState<DataState>(EMPTY_DATA);
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -238,8 +246,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    if (shouldFetch) {
+      void refresh();
+    } else {
+      // Signed out (or not yet signed in): drop any cached collections so a
+      // signed-out screen — or the next user to sign in on this browser —
+      // never momentarily sees the previous session's data.
+      setData(EMPTY_DATA);
+      setInitialized(false);
+      setError(null);
+    }
+  }, [shouldFetch, refresh]);
 
   // Background polling — keeps the store fresh so a staffer doesn't see
   // stale data while a manager is editing tee times on another machine.
@@ -248,6 +265,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // variant so the sidebar status pill doesn't constantly flicker.
   const POLL_INTERVAL_MS = 30_000;
   useEffect(() => {
+    // Don't poll until we're allowed to fetch (see `shouldFetch`).
+    if (!shouldFetch) return;
     let timer: number | undefined;
     let inFlight = false;
 
@@ -289,7 +308,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       stop();
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [refresh]);
+  }, [shouldFetch, refresh]);
 
   const upsert = useCallback(
     <K extends CollectionKey>(key: K, value: DataState[K][number]) => {

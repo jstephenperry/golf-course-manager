@@ -13,66 +13,77 @@ public static class ImportEndpoints
     public record ImportRowError(int Index, string? Id, string Error, string? Detail = null);
     public record ImportResult(int Created, int Skipped, List<ImportRowError> Errors);
 
+    // A13: per-endpoint cap on the number of rows accepted in a single
+    // import POST. Backstops the Kestrel body-size limit with a semantic
+    // collection-count limit so an oversized List<T> is rejected with 400
+    // rather than buffered and processed.
+    public const int MaxRows = 5000;
+
+    private static IResult? RejectIfTooLarge<T>(List<T> rows) =>
+        rows.Count > MaxRows
+            ? Results.BadRequest(new { error = "payload_too_large", maxRows = MaxRows, count = rows.Count })
+            : null;
+
     public static void MapImport(this IEndpointRouteBuilder app)
     {
         // ----- members
         app.MapPost("/api/import/members",
             async (List<MemberDto> rows, AppDbContext db) =>
-                Results.Ok(await ImportMembers(db, rows))
+                RejectIfTooLarge(rows) ?? Results.Ok(await ImportMembers(db, rows))
         ).WithTags("Import").RequireAuthorization(Policy.For(Permissions.ImportRun));
 
         // ----- nines (owns nested tee sets + holes + per-tee yardages)
         app.MapPost("/api/import/nines",
             async (List<NineDto> rows, AppDbContext db) =>
-                Results.Ok(await ImportNines(db, rows))
+                RejectIfTooLarge(rows) ?? Results.Ok(await ImportNines(db, rows))
         ).WithTags("Import").RequireAuthorization(Policy.For(Permissions.ImportRun));
 
         // ----- courses (FK: FrontNineId, BackNineId — both optional)
         app.MapPost("/api/import/courses",
             async (List<CourseDto> rows, AppDbContext db) =>
-                Results.Ok(await ImportCourses(db, rows))
+                RejectIfTooLarge(rows) ?? Results.Ok(await ImportCourses(db, rows))
         ).WithTags("Import").RequireAuthorization(Policy.For(Permissions.ImportRun));
 
         // ----- tee times (FK: CourseId)
         app.MapPost("/api/import/tee-times",
             async (List<TeeTimeDto> rows, AppDbContext db) =>
-                Results.Ok(await ImportTeeTimes(db, rows))
+                RejectIfTooLarge(rows) ?? Results.Ok(await ImportTeeTimes(db, rows))
         ).WithTags("Import").RequireAuthorization(Policy.For(Permissions.ImportRun));
 
         // ----- staff
         app.MapPost("/api/import/staff",
             async (List<StaffMemberDto> rows, AppDbContext db) =>
-                Results.Ok(await ImportStaff(db, rows))
+                RejectIfTooLarge(rows) ?? Results.Ok(await ImportStaff(db, rows))
         ).WithTags("Import").RequireAuthorization(Policy.For(Permissions.ImportRun));
 
         // ----- shifts (FK: StaffId)
         app.MapPost("/api/import/shifts",
             async (List<ShiftDto> rows, AppDbContext db) =>
-                Results.Ok(await ImportShifts(db, rows))
+                RejectIfTooLarge(rows) ?? Results.Ok(await ImportShifts(db, rows))
         ).WithTags("Import").RequireAuthorization(Policy.For(Permissions.ImportRun));
 
         // ----- weekly templates (FK: StaffId)
         app.MapPost("/api/import/weekly-templates",
             async (List<WeeklyTemplateDto> rows, AppDbContext db) =>
-                Results.Ok(await ImportWeeklyTemplates(db, rows))
+                RejectIfTooLarge(rows) ?? Results.Ok(await ImportWeeklyTemplates(db, rows))
         ).WithTags("Import").RequireAuthorization(Policy.For(Permissions.ImportRun));
 
         // ----- products
         app.MapPost("/api/import/products",
             async (List<ProductDto> rows, AppDbContext db) =>
-                Results.Ok(await ImportProducts(db, rows))
+                RejectIfTooLarge(rows) ?? Results.Ok(await ImportProducts(db, rows))
         ).WithTags("Import").RequireAuthorization(Policy.For(Permissions.ImportRun));
 
         // ----- tournaments (FK: CourseId)
         app.MapPost("/api/import/tournaments",
             async (List<TournamentDto> rows, AppDbContext db) =>
-                Results.Ok(await ImportTournaments(db, rows))
+                RejectIfTooLarge(rows) ?? Results.Ok(await ImportTournaments(db, rows))
         ).WithTags("Import").RequireAuthorization(Policy.For(Permissions.ImportRun));
 
         // ----- maintenance (FK: CourseId, AssignedTo)
         app.MapPost("/api/import/maintenance",
             async (List<MaintenanceTaskDto> rows, AppDbContext db) =>
-                Results.Ok(await ImportMaintenance(db, rows))
+                RejectIfTooLarge(rows) ?? Results.Ok(await ImportMaintenance(db, rows))
         ).WithTags("Import").RequireAuthorization(Policy.For(Permissions.ImportRun));
     }
 

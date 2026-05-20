@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="robots" content="noindex" />
+    <title>Renewing session…</title>
+  </head>
+  <body>
+    <!--
+      OIDC silent-renew target. Rendered only inside the hidden iframe
+      oidc-client-ts uses for prompt=none token renewal. Intentionally has
+      no UI and does not load the SPA — see src/silent-renew.ts.
+    -->
+    <script type="module" src="/src/silent-renew.ts"></script>
+  </body>
+</html>

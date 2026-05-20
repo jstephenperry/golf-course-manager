@@ -38,6 +38,22 @@ API_BASE=http://localhost:5210 ./import.sh   # explicit
 
 The script POSTs each file in order and echoes the `{created, skipped, errors}` summary per entity.
 
+### Authentication
+
+`/api/import/*` is RBAC-protected. Against a **local** (`localhost`/`127.0.0.1`) dev API with auth disabled, no token is needed. Against **any other** `API_BASE` the script refuses to run without one — supply it either way:
+
+```bash
+# Direct token
+FAIRWAY_API_TOKEN=<jwt> API_BASE=https://fairway.local:8443 ./import.sh
+
+# Or Keycloak client-credentials (script fetches a fresh token itself)
+FAIRWAY_TOKEN_URL=https://fairway.local:8443/auth/realms/fairway-hq/protocol/openid-connect/token \
+FAIRWAY_CLIENT_ID=fairway-import FAIRWAY_CLIENT_SECRET=<secret> \
+CURL_OPTS=-k API_BASE=https://fairway.local:8443 ./import.sh
+```
+
+The service-account client must hold a role permitted to call the import endpoints. `CURL_OPTS=-k` is for Caddy's internal-CA LAN mode.
+
 ## Re-running
 
 Imports are idempotent — re-uploading a file with the same `id` values reports `id_exists` and skips. To start fresh, hit the **Clear all data** button in the sidebar (or `POST /api/clear`) before re-running.

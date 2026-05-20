@@ -25,6 +25,13 @@ export default defineConfig({
     outDir: "dist",
     sourcemap: true,
     rollupOptions: {
+      // Two HTML entries: the SPA (index.html) and the standalone OIDC
+      // silent-renew callback. The latter is a separate page so prompt=none
+      // renewals never boot the full app inside the hidden iframe.
+      input: {
+        main: resolve(__dirname, "index.html"),
+        "silent-renew": resolve(__dirname, "silent-renew.html"),
+      },
       output: {
         manualChunks: {
           react: ["react", "react-dom", "react-router-dom"],

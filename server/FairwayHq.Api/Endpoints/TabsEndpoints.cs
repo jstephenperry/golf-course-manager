@@ -11,6 +11,13 @@ public static class TabsEndpoints
     private static string NewId(string prefix) =>
         $"{prefix}_{Guid.NewGuid():N}".Substring(0, prefix.Length + 1 + 12);
 
+    private static List<string> ParseList(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return new List<string>();
+        try { return System.Text.Json.JsonSerializer.Deserialize<List<string>>(json) ?? new(); }
+        catch { return new List<string>(); }
+    }
+
     private static IQueryable<PlayerTab> TabsWithChildren(AppDbContext db) =>
         db.Tabs.Include(t => t.Items).Include(t => t.Payments);
 
@@ -18,10 +25,31 @@ public static class TabsEndpoints
     {
         var tabs = app.MapGroup("/api/tabs").WithTags("Tabs");
 
-        tabs.MapGet("/", async (AppDbContext db) =>
-            (await TabsWithChildren(db).AsNoTracking().ToListAsync())
-            .Select(t => t.ToDto()))
-            .RequireAuthorization(Policy.For(Permissions.TabsRead));
+        // A11: paginated list-view that projects to a summary DTO — no
+        // eager-loaded Items/Payments. Fetch GET /api/tabs/{id} for the full
+        // tab with children.
+        tabs.MapGet("/", async (int? offset, int? limit, AppDbContext db) =>
+        {
+            var (skip, take) = CrudEndpoints.PageParams(offset, limit);
+            var rows = await db.Tabs.AsNoTracking()
+                .OrderByDescending(t => t.OpenedAt).ThenBy(t => t.Id)
+                .Skip(skip).Take(take)
+                .Select(t => new
+                {
+                    t.Id, t.OpenedAt, t.ClosedAt, t.Status,
+                    t.MemberIdsJson, t.GuestsJson, t.TeeTimeId,
+                    ItemCount = t.Items.Count,
+                    PaymentCount = t.Payments.Count,
+                    Subtotal = t.Items.Sum(i => i.UnitPrice * i.Quantity),
+                    t.TipAmount, t.TaxRate, t.Notes
+                })
+                .ToListAsync();
+            return rows.Select(t => new PlayerTabSummaryDto(
+                t.Id, t.OpenedAt, t.ClosedAt, t.Status,
+                ParseList(t.MemberIdsJson), ParseList(t.GuestsJson), t.TeeTimeId,
+                t.ItemCount, t.PaymentCount, t.Subtotal,
+                t.TipAmount, t.TaxRate, t.Notes));
+        }).RequireAuthorization(Policy.For(Permissions.TabsRead));
 
         tabs.MapGet("/{id}", async (string id, AppDbContext db) =>
         {
@@ -67,6 +95,7 @@ public static class TabsEndpoints
                 if (product is not null)
                 {
                     product.Stock += item.Quantity;
+                    product.Version++; // A12
                 }
             }
             foreach (var pay in entity.Payments.Where(p => p.Method == "Member Charge" && !string.IsNullOrEmpty(p.PayerMemberId)))
@@ -78,10 +107,15 @@ public static class TabsEndpoints
                     // back to the tab. The original Charge entry stays as
                     // historical truth — the void is conceptually a
                     // counter-payment, not a reversal.
-                    MemberAccountService.PostPayment(
+                    var res = MemberAccountService.PostPayment(
                         db, m, pay.Amount, method: null,
                         sourceKind: "Tab", sourceId: pay.Id,
                         note: $"Tab #{entity.Id} void", nowUtc: DateTime.UtcNow);
+                    if (res.Error is not null) // A17: don't swallow service errors
+                    {
+                        await tx.RollbackAsync();
+                        return Results.BadRequest(new { error = res.Error });
+                    }
                 }
             }
             entity.Status = "Voided";
@@ -96,11 +130,14 @@ public static class TabsEndpoints
         {
             var entity = await TabsWithChildren(db).FirstOrDefaultAsync(x => x.Id == id);
             if (entity is null) return Results.NotFound();
-            var subtotal = entity.Items.Sum(i => i.UnitPrice * i.Quantity);
-            var total = subtotal + (subtotal * entity.TaxRate) + entity.TipAmount;
-            var paid = entity.Payments.Sum(p => p.Amount);
-            var balance = total - paid;
-            if (balance > 0.005m)
+            // A9: round tax + total to cents via the shared money helper and
+            // compare on the rounded balance rather than a magic epsilon.
+            var subtotal = Money.Round(entity.Items.Sum(i => i.UnitPrice * i.Quantity));
+            var tax = Money.Round(subtotal * entity.TaxRate);
+            var total = Money.Round(subtotal + tax + entity.TipAmount);
+            var paid = Money.Round(entity.Payments.Sum(p => p.Amount));
+            var balance = Money.Round(total - paid);
+            if (Money.IsOwed(balance))
             {
                 return Results.BadRequest(new { error = "balance_outstanding", balance });
             }
@@ -110,84 +147,98 @@ public static class TabsEndpoints
             return Results.Ok(entity.ToDto());
         }).RequireAuthorization(Policy.For(Permissions.TabsSettle));
 
-        // Reopen settled tab
+        // Reopen settled tab. A12: a Voided tab is terminal — reopening it
+        // would resurrect stock/charge reversals already applied at void
+        // time. Reopening is a settlement-class action, so it requires
+        // tabs:settle rather than the broader tabs:write.
         tabs.MapPost("/{id}/reopen", async (string id, AppDbContext db) =>
         {
             var entity = await TabsWithChildren(db).FirstOrDefaultAsync(x => x.Id == id);
             if (entity is null) return Results.NotFound();
+            if (entity.Status == "Voided")
+                return Results.BadRequest(new { error = "cannot_reopen_voided" });
             entity.Status = "Open";
             entity.ClosedAt = null;
             await db.SaveChangesAsync();
             return Results.Ok(entity.ToDto());
-        }).RequireAuthorization(Policy.For(Permissions.TabsWrite));
+        }).RequireAuthorization(Policy.For(Permissions.TabsSettle));
 
         // ----- items -----
+        // A12: stock decrement guarded by the product concurrency token +
+        // retry so simultaneous adds across tabs don't lose stock updates.
         tabs.MapPost("/{id}/items", async (string id, CreateLineItemDto body, AppDbContext db) =>
         {
             if (body.Quantity < 1)
                 return Results.BadRequest(new { error = "quantity_must_be_positive" });
 
-            var tab = await TabsWithChildren(db).FirstOrDefaultAsync(x => x.Id == id);
-            if (tab is null) return Results.NotFound();
-            if (tab.Status != "Open")
-                return Results.BadRequest(new { error = "tab_not_open" });
-
-            var product = await db.Products.FindAsync(body.ProductId);
-            if (product is null) return Results.BadRequest(new { error = "unknown_product" });
-
-            await using var tx = await db.Database.BeginTransactionAsync();
-            // Decrement (clamp at zero — server is source of truth)
-            product.Stock = Math.Max(0, product.Stock - body.Quantity);
-
-            var item = new TabLineItem
+            return await ConcurrencyRetry.ExecuteAsync(db, async () =>
             {
-                Id = NewId("li"),
-                TabId = tab.Id,
-                ProductId = product.Id,
-                Name = product.Name,
-                UnitPrice = product.Price,
-                Quantity = body.Quantity,
-                Notes = body.Notes ?? string.Empty,
-                AddedAt = DateTime.UtcNow.ToString("o")
-            };
-            db.TabLineItems.Add(item);
-            await db.SaveChangesAsync();
-            await tx.CommitAsync();
+                var tab = await TabsWithChildren(db).FirstOrDefaultAsync(x => x.Id == id);
+                if (tab is null) return Results.NotFound();
+                if (tab.Status != "Open")
+                    return Results.BadRequest(new { error = "tab_not_open" });
 
-            var updated = await TabsWithChildren(db).AsNoTracking()
-                .FirstAsync(x => x.Id == id);
-            return Results.Ok(updated.ToDto());
+                var product = await db.Products.FindAsync(body.ProductId);
+                if (product is null) return Results.BadRequest(new { error = "unknown_product" });
+
+                await using var tx = await db.Database.BeginTransactionAsync();
+                // Decrement (clamp at zero — server is source of truth)
+                product.Stock = Math.Max(0, product.Stock - body.Quantity);
+                product.Version++;
+
+                var item = new TabLineItem
+                {
+                    Id = NewId("li"),
+                    TabId = tab.Id,
+                    ProductId = product.Id,
+                    Name = product.Name,
+                    UnitPrice = product.Price,
+                    Quantity = body.Quantity,
+                    Notes = body.Notes ?? string.Empty,
+                    AddedAt = DateTime.UtcNow.ToString("o")
+                };
+                db.TabLineItems.Add(item);
+                await db.SaveChangesAsync();
+                await tx.CommitAsync();
+
+                var updated = await TabsWithChildren(db).AsNoTracking()
+                    .FirstAsync(x => x.Id == id);
+                return Results.Ok(updated.ToDto());
+            });
         }).RequireAuthorization(Policy.For(Permissions.TabsWrite));
 
         tabs.MapPut("/{id}/items/{itemId}/quantity", async (string id, string itemId, AdjustQuantityBody body, AppDbContext db) =>
-        {
-            var tab = await TabsWithChildren(db).FirstOrDefaultAsync(x => x.Id == id);
-            if (tab is null) return Results.NotFound();
-            if (tab.Status != "Open")
-                return Results.BadRequest(new { error = "tab_not_open" });
-            var item = tab.Items.FirstOrDefault(i => i.Id == itemId);
-            if (item is null) return Results.NotFound();
-
-            var delta = body.Quantity - item.Quantity;
-            if (delta == 0)
-                return Results.Ok(tab.ToDto());
-            if (body.Quantity < 1)
-                return Results.BadRequest(new { error = "quantity_must_be_positive" });
-
-            await using var tx = await db.Database.BeginTransactionAsync();
-            var product = await db.Products.FindAsync(item.ProductId);
-            if (product is not null)
+            await ConcurrencyRetry.ExecuteAsync(db, async () =>
             {
-                product.Stock = Math.Max(0, product.Stock - delta);
-            }
-            item.Quantity = body.Quantity;
-            await db.SaveChangesAsync();
-            await tx.CommitAsync();
+                var tab = await TabsWithChildren(db).FirstOrDefaultAsync(x => x.Id == id);
+                if (tab is null) return Results.NotFound();
+                if (tab.Status != "Open")
+                    return Results.BadRequest(new { error = "tab_not_open" });
+                var item = tab.Items.FirstOrDefault(i => i.Id == itemId);
+                if (item is null) return Results.NotFound();
 
-            var updated = await TabsWithChildren(db).AsNoTracking()
-                .FirstAsync(x => x.Id == id);
-            return Results.Ok(updated.ToDto());
-        }).RequireAuthorization(Policy.For(Permissions.TabsWrite));
+                var delta = body.Quantity - item.Quantity;
+                if (delta == 0)
+                    return Results.Ok(tab.ToDto());
+                if (body.Quantity < 1)
+                    return Results.BadRequest(new { error = "quantity_must_be_positive" });
+
+                await using var tx = await db.Database.BeginTransactionAsync();
+                var product = await db.Products.FindAsync(item.ProductId);
+                if (product is not null)
+                {
+                    product.Stock = Math.Max(0, product.Stock - delta);
+                    product.Version++; // A12
+                }
+                item.Quantity = body.Quantity;
+                await db.SaveChangesAsync();
+                await tx.CommitAsync();
+
+                var updated = await TabsWithChildren(db).AsNoTracking()
+                    .FirstAsync(x => x.Id == id);
+                return Results.Ok(updated.ToDto());
+            })
+        ).RequireAuthorization(Policy.For(Permissions.TabsWrite));
 
         tabs.MapDelete("/{id}/items/{itemId}", async (string id, string itemId, AppDbContext db) =>
         {
@@ -203,6 +254,7 @@ public static class TabsEndpoints
             if (product is not null)
             {
                 product.Stock += item.Quantity;
+                product.Version++; // A12
             }
             db.TabLineItems.Remove(item);
             await db.SaveChangesAsync();
@@ -246,10 +298,15 @@ public static class TabsEndpoints
                     return Results.BadRequest(new { error = "member_suspended", memberId = m.Id });
                 if (m.Status == "Inactive")
                     return Results.BadRequest(new { error = "member_inactive", memberId = m.Id });
-                MemberAccountService.PostCharge(
+                var charge = MemberAccountService.PostCharge(
                     db, m, body.Amount, category: "F&B",
                     sourceKind: "Tab", sourceId: payment.Id,
                     note: payment.Note, nowUtc: DateTime.UtcNow);
+                if (charge.Error is not null) // A17
+                {
+                    await tx.RollbackAsync();
+                    return Results.BadRequest(new { error = charge.Error });
+                }
             }
             db.TabPayments.Add(payment);
             await db.SaveChangesAsync();
@@ -274,10 +331,17 @@ public static class TabsEndpoints
             {
                 var m = await db.Members.FindAsync(pay.PayerMemberId);
                 if (m is not null)
-                    MemberAccountService.PostPayment(
+                {
+                    var res = MemberAccountService.PostPayment(
                         db, m, pay.Amount, method: null,
                         sourceKind: "Tab", sourceId: pay.Id,
                         note: $"Tab #{tab.Id} payment removed", nowUtc: DateTime.UtcNow);
+                    if (res.Error is not null) // A17
+                    {
+                        await tx.RollbackAsync();
+                        return Results.BadRequest(new { error = res.Error });
+                    }
+                }
             }
             db.TabPayments.Remove(pay);
             await db.SaveChangesAsync();

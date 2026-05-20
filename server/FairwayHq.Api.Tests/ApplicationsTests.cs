@@ -13,6 +13,9 @@ public class ApplicationsTests : IClassFixture<ApiFactory>
     public async Task Full_application_lifecycle_creates_member_with_initiation_fee()
     {
         var client = _factory.CreateClient();
+        // A4: reviewer is now server-stamped from the authenticated principal,
+        // not the request body. Identify the reviewer via the test auth header.
+        client.DefaultRequestHeaders.Add(Authorization.TestAuthHandler.UserHeader, "tester");
 
         // 1. Submit
         var submitted = await (await client.PostAsJsonAsync("/api/applications", new

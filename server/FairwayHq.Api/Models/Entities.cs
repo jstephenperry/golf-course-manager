@@ -31,6 +31,13 @@ public class Member
 
     // Freeform staff CRM notes ("walks only", "prefers early tee times", etc.).
     public string Notes { get; set; } = string.Empty;
+
+    // A6: App-managed optimistic-concurrency token. SQLite has no native
+    // rowversion, so we bump this on every balance mutation and mark it
+    // .IsConcurrencyToken() in AppDbContext. Two interleaved balance writes
+    // race on this value; the loser gets DbUpdateConcurrencyException and
+    // retries against fresh state.
+    public int Version { get; set; }
 }
 
 // A "Course" is now an assembled playable round — references a front Nine
@@ -155,6 +162,9 @@ public class Product
     public decimal Cost { get; set; }
     public int Stock { get; set; }
     public int ReorderLevel { get; set; }
+
+    // A6/A12: concurrency token for stock-decrement races.
+    public int Version { get; set; }
 }
 
 public class Tournament
@@ -195,6 +205,9 @@ public class PlayerTab
     public decimal TipAmount { get; set; }
     public decimal TaxRate { get; set; }
     public string Notes { get; set; } = string.Empty;
+
+    // A6/A12: concurrency token for interleaved tab mutations.
+    public int Version { get; set; }
 
     public List<TabLineItem> Items { get; set; } = new();
     public List<TabPayment> Payments { get; set; } = new();

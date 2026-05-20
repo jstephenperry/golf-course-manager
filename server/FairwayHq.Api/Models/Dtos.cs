@@ -41,6 +41,22 @@ public record MemberApplicationDto(
 
 public record ApplicationReviewDto(string? Reviewer, string? Note);
 
+// A3: Dedicated input DTO for PUT /api/members/{id}. Contains ONLY editable
+// profile fields. Balance, Status, Active, OldestUnpaidChargeAt and
+// SuspendedAt are deliberately absent — balance changes only via the ledger
+// endpoints and status only via suspend/reinstate, so they can't be mass-
+// assigned through a raw member update.
+public record MemberUpdateDto(
+    string FirstName,
+    string LastName,
+    string Email,
+    string Phone,
+    string Tier,
+    double Handicap,
+    string JoinDate,
+    string? Notes
+);
+
 // Aggregated view for the member detail / CRM page. Only Completed tee times
 // contribute to LifetimeRounds and LastPlayedDate; RecentRounds is also
 // restricted to Completed so the table reads as a true playing history.
@@ -262,6 +278,26 @@ public record DataSnapshot(
     // hole yardages — those are nested inside NineDto and don't need
     // top-level snapshot lists.
     List<NineDto>? Nines = null
+);
+
+// A11: Lightweight list-view projection for GET /api/tabs. Excludes the
+// eager-loaded Items/Payments collections (callers fetch GET /api/tabs/{id}
+// for the full tab). ItemCount/PaymentCount/Subtotal cover what the list UI
+// needs without N child rows per tab.
+public record PlayerTabSummaryDto(
+    string Id,
+    string OpenedAt,
+    string? ClosedAt,
+    string Status,
+    List<string> MemberIds,
+    List<string> Guests,
+    string? TeeTimeId,
+    int ItemCount,
+    int PaymentCount,
+    decimal Subtotal,
+    decimal TipAmount,
+    decimal TaxRate,
+    string Notes
 );
 
 // Body for tab payment posting (auto-stamped PaidAt server-side).

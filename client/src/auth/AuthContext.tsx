@@ -8,13 +8,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import {
-  User,
-  UserManager,
-  WebStorageStateStore,
-  type UserManagerSettings,
-} from "oidc-client-ts";
+import { User, UserManager } from "oidc-client-ts";
 import { setAuth } from "../api/client";
+import { buildUserManagerSettings, readAuthConfig } from "./oidcSettings";
 import { permissionsFor } from "./rolePermissions";
 
 // ---------------------------------------------------------------------------
@@ -55,8 +51,22 @@ export interface AuthApi {
   logout: () => Promise<void>;
   /** True while the initial silent-renew attempt is in flight. */
   isLoading: boolean;
+  /**
+   * True once a login or logout redirect has been initiated, until the
+   * browser navigates away. Consumers (e.g. `ProtectedRoute`) must NOT
+   * trigger an interactive login while this is set — during logout,
+   * `signoutRedirect` clears the user before it navigates, and an
+   * auto-login fired in that window would race (and beat) the logout
+   * navigation, silently signing the user back in.
+   */
+  isRedirecting: boolean;
   /** True iff we currently hold a non-expired access token. */
   isAuthenticated: boolean;
+  /**
+   * True iff OIDC is configured (env vars present). When false, auth is
+   * disabled (local dev / tests) and consumers should not gate on it.
+   */
+  isEnabled: boolean;
   /**
    * Most recent auth error message, or null. Surface in the login page so
    * the user can see why a redirect/renew failed.
@@ -71,62 +81,6 @@ export interface AuthApi {
 }
 
 const AuthContext = createContext<AuthApi | null>(null);
-
-// ---------------------------------------------------------------------------
-// Configuration
-// ---------------------------------------------------------------------------
-
-interface AuthConfig {
-  authority: string;
-  clientId: string;
-}
-
-/**
- * Read OIDC config from Vite env. Returns null if any required var is
- * missing — the provider renders children anyway in that case so local dev
- * and tests that don't care about auth can run.
- */
-function readConfig(): AuthConfig | null {
-  const url = import.meta.env.VITE_KEYCLOAK_URL;
-  const realm = import.meta.env.VITE_KEYCLOAK_REALM;
-  const clientId = import.meta.env.VITE_KEYCLOAK_CLIENT_ID;
-  if (!url || !realm || !clientId) return null;
-  return {
-    authority: `${url}/realms/${realm}`,
-    clientId,
-  };
-}
-
-function buildUserManager(config: AuthConfig): UserManager {
-  const origin =
-    typeof window !== "undefined" ? window.location.origin : "http://localhost";
-  const settings: UserManagerSettings = {
-    authority: config.authority,
-    client_id: config.clientId,
-    // NOT under /auth/* — the reverse proxy routes that prefix to
-    // Keycloak. The callback must hit the SPA upstream, so we use
-    // /oidc/callback which Caddy passes through to fairway-hq.
-    redirect_uri: `${origin}/oidc/callback`,
-    post_logout_redirect_uri: `${origin}/`,
-    response_type: "code",
-    scope: "openid profile email",
-    // PKCE verifier / state / nonce — transient OIDC flow state, NOT the
-    // access token. localStorage is the right tradeoff: survives the
-    // round-trip to Keycloak so the callback can complete.
-    stateStore: new WebStorageStateStore({ store: window.localStorage }),
-    // Tokens themselves live in memory (oidc-client-ts default
-    // `InMemoryWebStorage` when no `userStore` is given would still work,
-    // but be explicit so a future refactor doesn't silently downgrade
-    // security by accident).
-    automaticSilentRenew: true,
-    // Fire the expiring event 60s before expiry — gives us a chance to
-    // signal an in-flight renew before a 401 happens. Default already 60,
-    // listed here for visibility.
-    accessTokenExpiringNotificationTimeInSeconds: 60,
-    monitorSession: false,
-  };
-  return new UserManager(settings);
-}
 
 // ---------------------------------------------------------------------------
 // Role / claim extraction
@@ -203,12 +157,12 @@ function toAuthUser(user: User | null): AuthUser | null {
 // ---------------------------------------------------------------------------
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const config = useMemo(readConfig, []);
+  const config = useMemo(readAuthConfig, []);
 
   // Stable across renders. Built once; nulled out if env is missing.
   const userManagerRef = useRef<UserManager | null>(null);
   if (config && userManagerRef.current === null) {
-    userManagerRef.current = buildUserManager(config);
+    userManagerRef.current = new UserManager(buildUserManagerSettings(config));
   }
   if (!config && typeof window !== "undefined") {
     // Loud once per page load; helps when someone forgets to set env vars
@@ -221,6 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const [oidcUser, setOidcUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(Boolean(config));
+  const [isRedirecting, setIsRedirecting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   // Keep the latest token in a ref so the api module's sync token provider
@@ -335,6 +290,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError("Auth is not configured.");
       return;
     }
+    setIsRedirecting(true);
     try {
       // Remember where the user was trying to go so the callback page can
       // restore it. `signinRedirect`'s `state` option round-trips through
@@ -345,6 +301,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         state: { returnTo: returnTo === "/login" ? "/" : returnTo },
       });
     } catch (err) {
+      setIsRedirecting(false);
       setError(err instanceof Error ? err.message : "Failed to start sign-in.");
     }
   }, []);
@@ -372,9 +329,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     const um = userManagerRef.current;
     if (!um) return;
+    // Set BEFORE signoutRedirect: it calls removeUser() (→ userUnloaded →
+    // oidcUser=null) before navigating, and ProtectedRoute would otherwise
+    // see !isAuthenticated and fire login(), racing past the logout.
+    setIsRedirecting(true);
     try {
       await um.signoutRedirect();
     } catch (err) {
+      setIsRedirecting(false);
       setError(err instanceof Error ? err.message : "Failed to sign out.");
     }
   }, []);
@@ -388,6 +350,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const authUser = useMemo(() => toAuthUser(oidcUser), [oidcUser]);
   const accessToken = oidcUser?.access_token ?? null;
+  const isEnabled = config !== null;
   const isAuthenticated =
     oidcUser !== null && !oidcUser.expired && Boolean(accessToken);
 
@@ -400,7 +363,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       isLoading,
+      isRedirecting,
       isAuthenticated,
+      isEnabled,
       error,
       completeSignin,
     }),
@@ -412,7 +377,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       isLoading,
+      isRedirecting,
       isAuthenticated,
+      isEnabled,
       error,
       completeSignin,
     ],
@@ -425,4 +392,13 @@ export function useAuth(): AuthApi {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
   return ctx;
+}
+
+/**
+ * Like {@link useAuth} but returns null instead of throwing when there's no
+ * surrounding `AuthProvider`. For components (e.g. the data store) that may
+ * be mounted in isolation by tests and need to degrade to "auth disabled".
+ */
+export function useOptionalAuth(): AuthApi | null {
+  return useContext(AuthContext);
 }

@@ -1,5 +1,7 @@
+using System.Globalization;
 using FairwayHq.Api.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace FairwayHq.Api.Data;
 
@@ -92,12 +94,36 @@ public class AppDbContext : DbContext
             .HasForeignKey(c => c.BackNineId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // SQLite stores decimals as TEXT for accuracy
+        // A6/A12: app-managed optimistic-concurrency tokens. SQLite has no
+        // native rowversion, so the balance/stock-mutating paths bump these
+        // integer columns and the EF concurrency check turns an interleaved
+        // write into a DbUpdateConcurrencyException (retried by callers).
+        mb.Entity<Member>().Property(m => m.Version).IsConcurrencyToken();
+        mb.Entity<Product>().Property(p => p.Version).IsConcurrencyToken();
+        mb.Entity<PlayerTab>().Property(t => t.Version).IsConcurrencyToken();
+
+        // A5: SQLite stores decimals as TEXT, but a bare TEXT column orders
+        // and range-filters lexicographically and is culture-sensitive on
+        // round-trip. Use an explicit invariant-culture, fixed-format
+        // converter so "10.0000" sorts/compares correctly against "9.0000"
+        // regardless of the server's locale.
+        var moneyConverter = new ValueConverter<decimal, string>(
+            v => v.ToString("F4", CultureInfo.InvariantCulture),
+            v => decimal.Parse(v, NumberStyles.Number, CultureInfo.InvariantCulture));
+        var nullableMoneyConverter = new ValueConverter<decimal?, string?>(
+            v => v.HasValue ? v.Value.ToString("F4", CultureInfo.InvariantCulture) : null,
+            v => string.IsNullOrEmpty(v)
+                ? (decimal?)null
+                : decimal.Parse(v, NumberStyles.Number, CultureInfo.InvariantCulture));
+
         foreach (var prop in mb.Model.GetEntityTypes()
                      .SelectMany(e => e.GetProperties())
                      .Where(p => p.ClrType == typeof(decimal) || p.ClrType == typeof(decimal?)))
         {
             prop.SetColumnType("TEXT");
+            prop.SetValueConverter(prop.ClrType == typeof(decimal)
+                ? moneyConverter
+                : nullableMoneyConverter);
         }
     }
 }

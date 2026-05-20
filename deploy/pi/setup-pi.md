@@ -50,7 +50,30 @@ sudo curl -fsSL https://raw.githubusercontent.com/jstephenperry/golf-course-mana
 # Edit the hostname in Caddyfile if you're using a domain other than fairway.local.
 sudo nano /opt/fairway-hq/compose.yaml
 sudo nano /opt/fairway-hq/Caddyfile
+```
 
+**Authentication is required in production.** The app runs with
+`ASPNETCORE_ENVIRONMENT=Production` and refuses to start unless the two
+OIDC variables are set — there is no unauthenticated prod mode. Provide
+them in an `.env` file next to the compose file. `podman compose` /
+`docker compose` auto-load `.env` from the compose directory:
+
+```bash
+sudo tee /opt/fairway-hq/.env >/dev/null <<'EOF'
+# OIDC issuer (token `iss`) — the realm URL behind Caddy's /auth route.
+FAIRWAY_AUTH_AUTHORITY=https://fairway.local:8443/auth/realms/fairway-hq
+# OIDC audience — the SPA client id registered in the realm.
+FAIRWAY_AUTH_AUDIENCE=fairway-hq-spa
+EOF
+sudo chmod 600 /opt/fairway-hq/.env
+```
+
+If either variable is missing or empty, `compose up` fails fast with a
+clear error (the `${VAR:?...}` guard in compose.yaml) rather than booting
+an open instance. You must also wire Caddy's `/auth/*` route to your IdP
+(see `Caddyfile`) so the issuer above is reachable.
+
+```bash
 cd /opt/fairway-hq
 sudo podman compose pull
 sudo podman compose up -d
@@ -113,16 +136,39 @@ sudo chmod +x /opt/fairway-hq/backup.sh
 sudo crontab -e
 ```
 
-Add:
+`/api/snapshot` is RBAC-protected (auth is required in prod), so the
+backup job needs a bearer token. Create a dedicated Keycloak
+**service-account / client-credentials** client (e.g. `fairway-backup`)
+with the role `/api/snapshot` requires, then let the script fetch a fresh
+token each run — no long-lived JWT on disk. Put the client secret in the
+backup env file:
+
+```bash
+sudo tee /opt/fairway-hq/backup.env >/dev/null <<'EOF'
+FAIRWAY_TOKEN_URL=https://fairway.local:8443/auth/realms/fairway-hq/protocol/openid-connect/token
+FAIRWAY_CLIENT_ID=fairway-backup
+FAIRWAY_CLIENT_SECRET=CHANGE_ME
+# LAN-only mode uses Caddy's internal CA; -k skips host CA trust for this call.
+CURL_OPTS=-k
+EOF
+sudo chmod 600 /opt/fairway-hq/backup.env
+```
+
+Alternatively, skip the client and hand the script a token directly with
+`FAIRWAY_API_TOKEN=<jwt>` (handy for one-off manual runs). If neither is
+provided the script exits non-zero with a clear message rather than
+writing a `401` body to a backup file.
+
+Add (note the `set -a` so the env file's vars are exported to the script):
 
 ```
-0 2 * * *  BACKUP_DIR=/mnt/usb/fairway-backups /opt/fairway-hq/backup.sh >> /var/log/fairway-backup.log 2>&1
+0 2 * * *  set -a; . /opt/fairway-hq/backup.env; BACKUP_DIR=/mnt/usb/fairway-backups /opt/fairway-hq/backup.sh >> /var/log/fairway-backup.log 2>&1
 ```
 
 Test it manually:
 
 ```bash
-sudo /opt/fairway-hq/backup.sh
+sudo bash -c 'set -a; . /opt/fairway-hq/backup.env; /opt/fairway-hq/backup.sh'
 ls -la /var/backups/fairway-hq/
 ```
 
@@ -130,7 +176,14 @@ For off-site backup, periodically rsync that directory to a cheap S3-compatible 
 
 ## 6. Initial data
 
-With the app running and no data, visit `https://fairway.local:8443/import` from a laptop. Upload the per-entity template JSON files in dependency order (see `client/public/templates/README.md`). Or run the `seed-data/greenside-academy/import.sh` against `API_BASE=https://fairway.local:8443` for a complete demo dataset (the script takes whatever `API_BASE` you pass).
+With the app running and no data, visit `https://fairway.local:8443/import` from a laptop. Upload the per-entity template JSON files in dependency order (see `client/public/templates/README.md`). Or run the `seed-data/greenside-academy/import.sh` against `API_BASE=https://fairway.local:8443` for a complete demo dataset.
+
+The `/api/import/*` endpoints are RBAC-protected, so against a non-local `API_BASE` the script requires a token — same options as the backup job (`FAIRWAY_API_TOKEN`, or `FAIRWAY_TOKEN_URL` + `FAIRWAY_CLIENT_ID` + `FAIRWAY_CLIENT_SECRET`). For the internal-CA LAN mode add `CURL_OPTS=-k`:
+
+```bash
+FAIRWAY_API_TOKEN=<jwt> CURL_OPTS=-k API_BASE=https://fairway.local:8443 \
+  seed-data/greenside-academy/import.sh
+```
 
 ## Troubleshooting
 

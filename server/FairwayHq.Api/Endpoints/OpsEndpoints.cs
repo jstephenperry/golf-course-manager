@@ -1,12 +1,21 @@
 using FairwayHq.Api.Authorization;
 using FairwayHq.Api.Data;
 using FairwayHq.Api.Models;
+using FairwayHq.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace FairwayHq.Api.Endpoints;
 
 public static class OpsEndpoints
 {
+    // A13: cap on the total number of rows a single restore body may carry,
+    // backstopping the Kestrel body-size limit with a semantic count limit.
+    private const int MaxRestoreRows = 50_000;
+
+    // A2: a member's recomputed-from-ledger balance must match the supplied
+    // MemberDto.Balance to within a cent, else the snapshot is internally
+    // inconsistent and we reject it.
+    private const decimal BalanceTolerance = 0.01m;
     public static void MapOps(this IEndpointRouteBuilder app)
     {
         app.MapGet("/api/health", () => Results.Ok(new
@@ -23,6 +32,52 @@ public static class OpsEndpoints
 
         app.MapPost("/api/snapshot/restore", async (DataSnapshot body, AppDbContext db) =>
         {
+            // A13: reject oversized snapshots before doing any work.
+            var ledgerCount = body.LedgerEntries?.Count ?? 0;
+            var totalRows = body.Members.Count + body.MemberApplications.Count
+                + (body.Nines?.Count ?? 0) + body.Courses.Count + body.TeeTimes.Count
+                + body.Staff.Count + body.Shifts.Count + body.WeeklyTemplates.Count
+                + body.Products.Count + body.Tournaments.Count + body.Maintenance.Count
+                + body.Tabs.Count + ledgerCount;
+            if (totalRows > MaxRestoreRows)
+                return Results.BadRequest(new { error = "payload_too_large", maxRows = MaxRestoreRows, count = totalRows });
+
+            // A2: validate the snapshot reconciles BEFORE mutating the DB —
+            // reconstruct each member's balance from the restored ledger and
+            // reject the whole restore if the supplied MemberDto.Balance
+            // disagrees. Restored Member.Balance is then sourced from the
+            // ledger, not blindly trusted from the DTO.
+            var ledgerByMember = (body.LedgerEntries ?? new List<MemberLedgerEntryDto>())
+                .Select(d => new MemberLedgerEntry
+                {
+                    Id = d.Id, MemberId = d.MemberId, EntryType = d.EntryType,
+                    Category = d.Category, Amount = d.Amount, Method = d.Method,
+                    Note = d.Note, PostedAt = d.PostedAt, SourceKind = d.SourceKind,
+                    SourceId = d.SourceId, ReversesEntryId = d.ReversesEntryId,
+                    VoidedAt = d.VoidedAt, VoidedByEntryId = d.VoidedByEntryId,
+                })
+                .GroupBy(e => e.MemberId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            var reconciledBalances = new Dictionary<string, decimal>(StringComparer.Ordinal);
+            foreach (var d in body.Members)
+            {
+                var entries = ledgerByMember.TryGetValue(d.Id, out var es)
+                    ? es : new List<MemberLedgerEntry>();
+                var computed = MemberAccountService.ComputeBalanceFromLedger(entries);
+                reconciledBalances[d.Id] = computed;
+                if (Math.Abs(computed - d.Balance) > BalanceTolerance)
+                {
+                    return Results.BadRequest(new
+                    {
+                        error = "ledger_balance_mismatch",
+                        memberId = d.Id,
+                        suppliedBalance = d.Balance,
+                        ledgerBalance = computed,
+                    });
+                }
+            }
+
             await using var tx = await db.Database.BeginTransactionAsync();
 
             db.TabLineItems.RemoveRange(db.TabLineItems);
@@ -53,7 +108,11 @@ public static class OpsEndpoints
             foreach (var d in body.Members)
             {
                 var e = new Member { Id = d.Id };
-                e.Apply(d); db.Members.Add(e);
+                e.Apply(d);
+                // A2: source the restored balance from the reconciled ledger,
+                // not the DTO (which was only used as a consistency check).
+                e.Balance = reconciledBalances.TryGetValue(d.Id, out var b) ? b : 0m;
+                db.Members.Add(e);
             }
             foreach (var d in body.MemberApplications)
             {

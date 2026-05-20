@@ -1,6 +1,17 @@
 import { Suspense, lazy } from "react";
 import { Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
+import {
+  COURSES_READ,
+  IMPORT_RUN,
+  MAINTENANCE_READ,
+  MEMBERS_READ,
+  PRODUCTS_READ,
+  STAFF_READ,
+  TABS_READ,
+  TEE_TIMES_READ,
+  TOURNAMENTS_READ,
+} from "./auth/permissions";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Layout } from "./components/Layout";
 import { ToasterProvider } from "./components/Toaster";
@@ -82,102 +93,29 @@ export default function App() {
               }
             />
 
-            {/* Everything else requires a valid session. */}
+            {/*
+              Everything else requires a valid session. Each protected
+              route additionally declares the permission it needs via a
+              nested `ProtectedRoute requirePermission`, which renders a
+              `<Forbidden>` panel (inside its own Layout) for users who
+              are signed in but lack the permission. The permissions match
+              Layout.tsx's nav filtering so a visible nav item always leads
+              to a viewable page. This is defense-in-depth/UX only — the
+              server is the real authorization boundary.
+
+              Note: the permission-gated routes are NOT nested inside the
+              shared `<Layout>` route; each gated `ProtectedRoute` provides
+              its own Layout (on both the allowed and Forbidden paths), so
+              the sidebar never double-renders.
+            */}
             <Route element={<ProtectedRoute />}>
+              {/* Routes available to any authenticated user. */}
               <Route element={<Layout />}>
                 <Route
                   index
                   element={
                     <Suspense fallback={<PageFallback />}>
                       <Dashboard />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="tee-times"
-                  element={
-                    <Suspense fallback={<PageFallback />}>
-                      <TeeTimes />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="members"
-                  element={
-                    <Suspense fallback={<PageFallback />}>
-                      <Members />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="members/:memberId"
-                  element={
-                    <Suspense fallback={<PageFallback />}>
-                      <MemberDetail />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="courses"
-                  element={
-                    <Suspense fallback={<PageFallback />}>
-                      <Courses />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="staff"
-                  element={
-                    <Suspense fallback={<PageFallback />}>
-                      <Staff />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="pro-shop"
-                  element={
-                    <Suspense fallback={<PageFallback />}>
-                      <ProShop />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="tabs"
-                  element={
-                    <Suspense fallback={<PageFallback />}>
-                      <Tabs />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="tournaments"
-                  element={
-                    <Suspense fallback={<PageFallback />}>
-                      <Tournaments />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="maintenance"
-                  element={
-                    <Suspense fallback={<PageFallback />}>
-                      <Maintenance />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="import"
-                  element={
-                    <Suspense fallback={<PageFallback />}>
-                      <ImportPage />
-                    </Suspense>
-                  }
-                />
-                <Route
-                  path="courses/:courseId/scorecard"
-                  element={
-                    <Suspense fallback={<PageFallback />}>
-                      <Scorecard />
                     </Suspense>
                   }
                 />
@@ -189,6 +127,139 @@ export default function App() {
                     </Suspense>
                   }
                 />
+              </Route>
+
+              <Route element={<ProtectedRoute requirePermission={TEE_TIMES_READ} />}>
+                <Route element={<Layout />}>
+                  <Route
+                    path="tee-times"
+                    element={
+                      <Suspense fallback={<PageFallback />}>
+                        <TeeTimes />
+                      </Suspense>
+                    }
+                  />
+                </Route>
+              </Route>
+
+              <Route element={<ProtectedRoute requirePermission={MEMBERS_READ} />}>
+                <Route element={<Layout />}>
+                  <Route
+                    path="members"
+                    element={
+                      <Suspense fallback={<PageFallback />}>
+                        <Members />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="members/:memberId"
+                    element={
+                      <Suspense fallback={<PageFallback />}>
+                        <MemberDetail />
+                      </Suspense>
+                    }
+                  />
+                </Route>
+              </Route>
+
+              <Route element={<ProtectedRoute requirePermission={COURSES_READ} />}>
+                <Route element={<Layout />}>
+                  <Route
+                    path="courses"
+                    element={
+                      <Suspense fallback={<PageFallback />}>
+                        <Courses />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="courses/:courseId/scorecard"
+                    element={
+                      <Suspense fallback={<PageFallback />}>
+                        <Scorecard />
+                      </Suspense>
+                    }
+                  />
+                </Route>
+              </Route>
+
+              <Route element={<ProtectedRoute requirePermission={STAFF_READ} />}>
+                <Route element={<Layout />}>
+                  <Route
+                    path="staff"
+                    element={
+                      <Suspense fallback={<PageFallback />}>
+                        <Staff />
+                      </Suspense>
+                    }
+                  />
+                </Route>
+              </Route>
+
+              <Route element={<ProtectedRoute requirePermission={PRODUCTS_READ} />}>
+                <Route element={<Layout />}>
+                  <Route
+                    path="pro-shop"
+                    element={
+                      <Suspense fallback={<PageFallback />}>
+                        <ProShop />
+                      </Suspense>
+                    }
+                  />
+                </Route>
+              </Route>
+
+              <Route element={<ProtectedRoute requirePermission={TABS_READ} />}>
+                <Route element={<Layout />}>
+                  <Route
+                    path="tabs"
+                    element={
+                      <Suspense fallback={<PageFallback />}>
+                        <Tabs />
+                      </Suspense>
+                    }
+                  />
+                </Route>
+              </Route>
+
+              <Route element={<ProtectedRoute requirePermission={TOURNAMENTS_READ} />}>
+                <Route element={<Layout />}>
+                  <Route
+                    path="tournaments"
+                    element={
+                      <Suspense fallback={<PageFallback />}>
+                        <Tournaments />
+                      </Suspense>
+                    }
+                  />
+                </Route>
+              </Route>
+
+              <Route element={<ProtectedRoute requirePermission={MAINTENANCE_READ} />}>
+                <Route element={<Layout />}>
+                  <Route
+                    path="maintenance"
+                    element={
+                      <Suspense fallback={<PageFallback />}>
+                        <Maintenance />
+                      </Suspense>
+                    }
+                  />
+                </Route>
+              </Route>
+
+              <Route element={<ProtectedRoute requirePermission={IMPORT_RUN} />}>
+                <Route element={<Layout />}>
+                  <Route
+                    path="import"
+                    element={
+                      <Suspense fallback={<PageFallback />}>
+                        <ImportPage />
+                      </Suspense>
+                    }
+                  />
+                </Route>
               </Route>
             </Route>
           </Routes>

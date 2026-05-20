@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.DataProtection;
 using FairwayHq.Api.Authorization;
 using FairwayHq.Api.Data;
 using FairwayHq.Api.Endpoints;
@@ -8,6 +9,11 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// A13: cap the request body size at the server level so an oversized
+// import/restore payload is rejected before it's buffered into memory.
+// 32 MiB comfortably covers a full data snapshot while bounding abuse.
+builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 32 * 1024 * 1024);
 
 // ---------- Services ----------
 var connection = builder.Configuration.GetConnectionString("Default")
@@ -28,12 +34,29 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.Configure<DunningOptions>(
     builder.Configuration.GetSection(DunningOptions.Section));
+builder.Services.Configure<MembershipOptions>(
+    builder.Configuration.GetSection(MembershipOptions.Section));
 builder.Services.AddSingleton<DunningService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<DunningService>());
 
 // Authentication + authorization: JWT bearer against Keycloak in prod /
 // dev; an in-memory test handler in the Testing env. See ADR 0003.
 builder.Services.AddFairwayAuth(builder.Configuration, builder.Environment);
+
+// Persist DataProtection keys onto the data volume when a key-ring path is
+// configured (the container image sets DataProtection:KeyRingPath to
+// /app/data/keys). Without this the key ring lands in the container's
+// ephemeral home dir and is regenerated on every recreate — the runtime
+// logs a warning and any protected payload (antiforgery tokens, future
+// cookie/session use) becomes invalid across restarts. Native `dotnet run`
+// leaves this unset and keeps the framework default.
+var keyRingPath = builder.Configuration["DataProtection:KeyRingPath"];
+if (!string.IsNullOrWhiteSpace(keyRingPath))
+{
+    Directory.CreateDirectory(keyRingPath);
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(keyRingPath));
+}
 
 const string DevCors = "DevCors";
 builder.Services.AddCors(o =>

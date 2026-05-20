@@ -7,7 +7,7 @@
 # CI does the multi-arch build automatically on tag push.
 
 # ---------- Stage 1: SPA bundle ----------
-FROM --platform=$BUILDPLATFORM node:20-alpine AS spa
+FROM --platform=$BUILDPLATFORM node:20-alpine@sha256:afdf98210b07b586eb71fa22ba2e432e058e4cd1304d31ed60888755b8c865fb AS spa
 WORKDIR /spa
 COPY client/package.json client/package-lock.json ./
 # `npm install` (not `npm ci`) — npm's optional platform binaries for
@@ -33,7 +33,7 @@ RUN npm run build
 # Build is always run on the BUILDPLATFORM (CI host) with cross-compile
 # via -a $TARGETARCH; that's dramatically faster than emulating a full
 # ARM .NET SDK under QEMU during a multi-arch build.
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS api
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0@sha256:95ce19ccaea2d89766ac07f30c8214b2cafd97c5212418937833421742b57acf AS api
 ARG TARGETARCH
 WORKDIR /src
 COPY server/FairwayHq.sln ./
@@ -50,25 +50,63 @@ RUN dotnet publish FairwayHq.Api/FairwayHq.Api.csproj \
       /p:UseAppHost=false
 # Drop the built SPA into wwwroot so the API serves it as static files.
 COPY --from=spa /spa/dist /publish/wwwroot
+# Pre-create the /app/data mount point here (the chiseled runtime has no
+# shell, so we can't `mkdir`/`chown` in the runtime stage). Owned by the
+# .NET non-root UID (1654, the convention used by APP_UID) so the SQLite
+# WAL is writable when the container runs as that user.
+RUN mkdir -p /data-skel && chown 1654:1654 /data-skel
+
+# Build the tiny HEALTHCHECK probe (see scripts/healthcheck/). The chiseled
+# runtime has no curl/shell, so the probe is a framework-dependent .NET
+# console app the HEALTHCHECK invokes via `dotnet`. Cross-compiled like the
+# API so it matches $TARGETARCH.
+COPY scripts/healthcheck/ ./healthcheck/
+RUN dotnet publish ./healthcheck/HealthCheck.csproj \
+      -c Release \
+      -a $TARGETARCH \
+      -o /healthcheck \
+      /p:UseAppHost=false
 
 # ---------- Stage 3: runtime ----------
 # chiseled-extra adds ICU + tzdata to the bare chiseled image — needed
 # for currency / date formatting in non-en-US locales and for honoring
 # the TZ environment variable when set by the operator.
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra@sha256:8604016b669646450e857572c51501cfd97b6052436a2ef4bdb850f9432820a4 AS runtime
 WORKDIR /app
 COPY --from=api /publish ./
+# Seed an empty /app/data owned by APP_UID (1654) so the non-root runtime
+# user can write the SQLite DB even before the named volume is populated.
+COPY --from=api --chown=1654:1654 /data-skel /app/data
+# The curl-less HEALTHCHECK probe (see scripts/healthcheck/).
+COPY --from=api /healthcheck /healthcheck
 
 # Connection string points at /app/data so the SQLite file lives on a
 # mounted volume — survives image upgrades and container restarts. The
 # operator can override via env to point at a USB SSD: e.g.
 #   -e ConnectionStrings__Default='Data Source=/mnt/ssd/fairway.db'
 ENV ConnectionStrings__Default="Data Source=/app/data/fairway.db" \
+    DataProtection__KeyRingPath=/app/data/keys \
     ASPNETCORE_URLS=http://+:8080 \
     DOTNET_RUNNING_IN_CONTAINER=true
 
 VOLUME ["/app/data"]
 EXPOSE 8080
+
+# Liveness/readiness probe against the AllowAnonymous /api/health endpoint.
+#
+# IMPORTANT: the chiseled-extra base ships NO shell, curl, wget, or
+# busybox (verified), so the usual `CMD curl -f .../api/health` is
+# impossible. The only executables in the image are `dotnet` and the
+# app's own assemblies. We bundle a tiny self-contained probe assembly
+# (built in the SDK stage from scripts/healthcheck/) and invoke it via
+# the runtime's `dotnet` host. It exits 0 on HTTP 200, non-zero otherwise.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD ["dotnet", "/healthcheck/HealthCheck.dll", "http://localhost:8080/api/health"]
+
+# Run as the .NET non-root user (UID 1654) rather than root. The
+# chiseled-extra base defines APP_UID=1654; /app/data was chowned to that
+# UID above so the SQLite WAL stays writable on the mounted volume.
+USER $APP_UID
 
 # Labels:
 #   - autoupdate=registry tells Podman's auto-update timer to pull and

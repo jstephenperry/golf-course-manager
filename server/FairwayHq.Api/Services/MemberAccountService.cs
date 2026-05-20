@@ -80,6 +80,7 @@ public static class MemberAccountService
 
         var hadBalance = member.Balance > 0m;
         member.Balance += amount;
+        member.Version++; // A6: bump concurrency token on every balance mutation
         if (!hadBalance)
         {
             member.OldestUnpaidChargeAt = entry.PostedAt;
@@ -122,6 +123,7 @@ public static class MemberAccountService
         db.MemberLedgerEntries.Add(entry);
 
         member.Balance = Math.Max(0m, member.Balance - amount);
+        member.Version++; // A6
         ApplyBalanceClearedSideEffects(member);
         return new(entry, null);
     }
@@ -161,6 +163,7 @@ public static class MemberAccountService
 
         original.VoidedAt = reversal.PostedAt;
         original.VoidedByEntryId = reversal.Id;
+        member.Version++; // A6
 
         // Reverse the original's effect on the cached balance.
         if (original.EntryType == "Charge")
@@ -230,6 +233,41 @@ public static class MemberAccountService
             if (balance <= 0m) cycleStart = null;
         }
         return cycleStart;
+    }
+
+    /// <summary>
+    /// A2: Reconstructs a member's balance purely from a set of ledger
+    /// entries, using the same Charge/Payment/Reversal semantics as the live
+    /// Post*/Void* helpers. Clamped at zero to mirror PostPayment. Used by
+    /// snapshot restore to ground Member.Balance in the ledger rather than
+    /// trusting the (potentially tampered) MemberDto.Balance.
+    /// </summary>
+    public static decimal ComputeBalanceFromLedger(IEnumerable<MemberLedgerEntry> entries)
+    {
+        var list = entries
+            .OrderBy(e => e.PostedAt, StringComparer.Ordinal)
+            .ThenBy(e => e.Id, StringComparer.Ordinal)
+            .ToList();
+        var byId = list.ToDictionary(e => e.Id);
+
+        decimal Delta(MemberLedgerEntry e) => e.EntryType switch
+        {
+            "Charge" => e.Amount,
+            "Payment" => -e.Amount,
+            "Reversal" when e.ReversesEntryId is { } rid && byId.TryGetValue(rid, out var orig) =>
+                orig.EntryType == "Charge" ? -e.Amount : e.Amount,
+            _ => 0m,
+        };
+
+        decimal balance = 0m;
+        foreach (var e in list)
+        {
+            balance += Delta(e);
+            // Payments clamp the running balance at zero (mirrors PostPayment),
+            // so a credit beyond zero doesn't create a negative carry.
+            if (balance < 0m) balance = 0m;
+        }
+        return balance;
     }
 
     private static void ApplyBalanceClearedSideEffects(Member member)

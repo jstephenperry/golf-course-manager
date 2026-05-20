@@ -24,6 +24,14 @@ localhost:8443, 127.0.0.1:8443 {
 		reverse_proxy fairway-keycloak:8080 {
 			header_up X-Forwarded-Proto https
 			header_up X-Forwarded-Host {host}
+			# Caddy's {host} strips the port, so without this Keycloak
+			# sees only "localhost". With KC_HOSTNAME_BACKCHANNEL_DYNAMIC
+			# on, the discovery doc's token_endpoint/jwks_uri are derived
+			# from the forwarded request — and would default to :443,
+			# yielding https://localhost/auth/... The browser's token POST
+			# then fails (nothing on 443). Forward the real port so those
+			# endpoints come back as https://localhost:8443/auth/...
+			header_up X-Forwarded-Port 8443
 		}
 	}
 
@@ -33,6 +41,7 @@ localhost:8443, 127.0.0.1:8443 {
 		reverse_proxy fairway-hq:8080 {
 			header_up X-Forwarded-Proto https
 			header_up X-Forwarded-Host {host}
+			header_up X-Forwarded-Port 8443
 		}
 	}
 }

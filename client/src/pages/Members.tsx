@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 import {
   MEMBERS_SUSPEND,
   MEMBERS_WRITE,
@@ -68,6 +69,7 @@ export function Members() {
     runDunning,
   } = useStore();
   const toaster = useToaster();
+  const { user } = useAuth();
   const [tab, setTab] = useState<Tab>("members");
 
   // ---------- Members tab state ----------
@@ -170,8 +172,14 @@ export function Members() {
     app: MemberApplication;
     kind: "approve" | "reject";
   } | null>(null);
-  const [reviewer, setReviewer] = useState("");
   const [reviewNote, setReviewNote] = useState("");
+
+  // The reviewer is the authenticated user, never free text. The server
+  // ignores any client-supplied reviewer and stamps it from the validated
+  // token; we still pass an identifier because the API client requires the
+  // field, but the server value is authoritative.
+  const reviewerIdentity =
+    user?.username || user?.name || user?.sub || "unknown";
 
   const appsByStatus = useMemo(() => {
     const groups = { Pending: [], Approved: [], Rejected: [], Activated: [], Withdrawn: [] } as Record<MemberApplication["status"], MemberApplication[]>;
@@ -202,7 +210,6 @@ export function Members() {
 
   const openReview = (app: MemberApplication, kind: "approve" | "reject") => {
     setReviewing({ app, kind });
-    setReviewer("");
     setReviewNote("");
   };
 
@@ -211,7 +218,7 @@ export function Members() {
     const { app, kind } = reviewing;
     setAppBusy(true);
     const fn = kind === "approve" ? appsApi.approve : appsApi.reject;
-    const result = await fn(app.id, reviewer.trim() || "staff", reviewNote);
+    const result = await fn(app.id, reviewerIdentity, reviewNote);
     setAppBusy(false);
     if (result) setReviewing(null);
   };
@@ -950,14 +957,8 @@ export function Members() {
             {reviewing.app.firstName} {reviewing.app.lastName} ·{" "}
             {reviewing.app.requestedTier}
           </div>
-          <div className="field">
-            <label>Reviewer</label>
-            <input
-              className="input"
-              placeholder="e.g. M. Park"
-              value={reviewer}
-              onChange={(e) => setReviewer(e.target.value)}
-            />
+          <div className="muted" style={{ marginTop: 4 }}>
+            Reviewing as <strong>{reviewerIdentity}</strong>
           </div>
           <div className="field">
             <label>Note</label>

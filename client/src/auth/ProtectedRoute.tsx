@@ -22,16 +22,22 @@ export function ProtectedRoute({
 }: {
   requirePermission?: string;
 }): JSX.Element | null {
-  const { isLoading, isAuthenticated, hasPermission, login } = useAuth();
+  const { isLoading, isRedirecting, isAuthenticated, hasPermission, login } =
+    useAuth();
 
   // Trigger interactive sign-in once when we discover the user isn't
   // authenticated. Doing this in an effect (not during render) avoids
   // calling a promise-returning side-effect from the render path.
+  //
+  // Skip while a redirect is already in flight: during logout,
+  // signoutRedirect clears the user (→ !isAuthenticated) just before it
+  // navigates to Keycloak, and an auto-login here would race past the
+  // logout and silently sign the user back in.
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isLoading && !isAuthenticated && !isRedirecting) {
       void login();
     }
-  }, [isLoading, isAuthenticated, login]);
+  }, [isLoading, isAuthenticated, isRedirecting, login]);
 
   if (isLoading) {
     return (

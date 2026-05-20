@@ -23,9 +23,15 @@
 #
 # In either mode, `/auth/*` is commented out by default. Uncomment +
 # point it at your IdP (Keycloak elsewhere, Authentik, or a hosted
-# Auth0 / Okta tenant — anything that speaks OIDC + JWKS) when the
-# course is ready for staff logins. Until then the app runs without
-# auth (the prod `Authentication:Keycloak:Authority` env stays unset).
+# Auth0 / Okta tenant — anything that speaks OIDC + JWKS) before the
+# course goes live.
+#
+# NOTE: auth is now REQUIRED in production. The app runs with
+# ASPNETCORE_ENVIRONMENT=Production and the API refuses to start unless
+# Authentication__Keycloak__Authority / __Audience are set (compose.yaml
+# enforces this via `${VAR:?...}` from /opt/fairway-hq/.env). So this
+# `/auth/*` route must be wired to a real IdP before `compose up` will
+# bring a working stack online — there is no unauthenticated prod mode.
 
 {
 	auto_https disable_redirects

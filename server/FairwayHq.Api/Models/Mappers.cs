@@ -39,6 +39,17 @@ public static class Mappers
         m.Notes = d.Notes ?? string.Empty;
     }
 
+    // A3: Profile-only update. Never touches Balance, Status, Active, or the
+    // aging/suspension timestamps — those are owned by the ledger and
+    // suspend/reinstate flows.
+    public static void ApplyProfile(this Member m, MemberUpdateDto d)
+    {
+        m.FirstName = d.FirstName; m.LastName = d.LastName;
+        m.Email = d.Email; m.Phone = d.Phone; m.Tier = d.Tier;
+        m.Handicap = d.Handicap; m.JoinDate = d.JoinDate;
+        m.Notes = d.Notes ?? string.Empty;
+    }
+
     public static MemberApplicationDto ToDto(this MemberApplication a) =>
         new(a.Id, a.FirstName, a.LastName, a.Email, a.Phone, a.RequestedTier,
             a.SponsoringMemberId, a.InitiationFee, a.Notes, a.Status,

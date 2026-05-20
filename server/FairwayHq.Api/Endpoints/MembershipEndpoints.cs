@@ -1,9 +1,11 @@
+using System.Security.Claims;
 using FairwayHq.Api.Authorization;
 using FairwayHq.Api.Data;
 using FairwayHq.Api.Models;
 using FairwayHq.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace FairwayHq.Api.Endpoints;
 
@@ -12,22 +14,46 @@ public static class MembershipEndpoints
     private static string NewId(string prefix) =>
         $"{prefix}_{Guid.NewGuid():N}".Substring(0, prefix.Length + 1 + 12);
 
+    // A4: derive the reviewer identity from the authenticated principal,
+    // never from the request body. preferred_username (Keycloak) → name →
+    // sub. In the Testing env the TestAuthHandler stamps all three.
+    private static string ReviewerFrom(ClaimsPrincipal user) =>
+        user.FindFirst("preferred_username")?.Value
+        ?? user.Identity?.Name
+        ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+        ?? "unknown";
+
     public static void MapMembership(this IEndpointRouteBuilder app)
     {
         var apps = app.MapGroup("/api/applications").WithTags("MemberApplications");
 
-        apps.MapGet("/", async (AppDbContext db) =>
-            (await db.MemberApplications.AsNoTracking().ToListAsync())
-                .OrderByDescending(a => a.SubmittedAt)
-                .Select(a => a.ToDto()))
-            .RequireAuthorization(Policy.For(Permissions.MembersApplicationsRead));
+        apps.MapGet("/", async (int? offset, int? limit, AppDbContext db) =>
+        {
+            // A11: offset/limit pagination with backward-compatible defaults.
+            var (skip, take) = CrudEndpoints.PageParams(offset, limit);
+            return (await db.MemberApplications.AsNoTracking()
+                .OrderByDescending(a => a.SubmittedAt).ThenBy(a => a.Id)
+                .Skip(skip).Take(take)
+                .ToListAsync())
+                .Select(a => a.ToDto());
+        }).RequireAuthorization(Policy.For(Permissions.MembersApplicationsRead));
 
-        apps.MapPost("/", async (MemberApplicationDto dto, AppDbContext db) =>
+        apps.MapPost("/", async (MemberApplicationDto dto, IOptions<MembershipOptions> opts, AppDbContext db) =>
         {
             if (string.IsNullOrWhiteSpace(dto.FirstName) || string.IsNullOrWhiteSpace(dto.LastName))
             {
                 return Results.BadRequest(new { error = "name_required" });
             }
+            // A14: bound the initiation fee against a sane config-driven
+            // ceiling and reject negatives before they become an opening
+            // ledger charge on activation.
+            if (dto.InitiationFee < 0)
+                return Results.BadRequest(new { error = "negative_initiation_fee" });
+            if (dto.InitiationFee > opts.Value.MaxInitiationFee)
+                return Results.BadRequest(new { error = "initiation_fee_too_large" });
+            if (!string.IsNullOrEmpty(dto.RequestedTier)
+                && !Validation.MemberTiers.Contains(dto.RequestedTier))
+                return Results.BadRequest(new { error = "unknown_tier" });
 
             var entity = new MemberApplication
             {
@@ -48,8 +74,12 @@ public static class MembershipEndpoints
             return Results.Created($"/api/applications/{entity.Id}", entity.ToDto());
         }).RequireAuthorization(Policy.For(Permissions.MembersApplicationsWrite));
 
-        apps.MapPut("/{id}", async (string id, MemberApplicationDto dto, AppDbContext db) =>
+        apps.MapPut("/{id}", async (string id, MemberApplicationDto dto, IOptions<MembershipOptions> opts, AppDbContext db) =>
         {
+            if (dto.InitiationFee < 0)
+                return Results.BadRequest(new { error = "negative_initiation_fee" });
+            if (dto.InitiationFee > opts.Value.MaxInitiationFee)
+                return Results.BadRequest(new { error = "initiation_fee_too_large" });
             var entity = await db.MemberApplications.FindAsync(id);
             if (entity is null) return Results.NotFound();
             if (entity.Status != "Pending")
@@ -59,7 +89,7 @@ public static class MembershipEndpoints
             return Results.Ok(entity.ToDto());
         }).RequireAuthorization(Policy.For(Permissions.MembersApplicationsWrite));
 
-        apps.MapPost("/{id}/approve", async (string id, [FromBody] ApplicationReviewDto body, AppDbContext db) =>
+        apps.MapPost("/{id}/approve", async (string id, [FromBody] ApplicationReviewDto body, ClaimsPrincipal user, AppDbContext db) =>
         {
             var entity = await db.MemberApplications.FindAsync(id);
             if (entity is null) return Results.NotFound();
@@ -68,13 +98,14 @@ public static class MembershipEndpoints
 
             entity.Status = "Approved";
             entity.ReviewedAt = DateTime.UtcNow.ToString("o");
-            entity.ReviewedBy = body?.Reviewer;
+            // A4: reviewer is server-stamped from the principal; body.Reviewer is ignored.
+            entity.ReviewedBy = ReviewerFrom(user);
             entity.ReviewNote = body?.Note;
             await db.SaveChangesAsync();
             return Results.Ok(entity.ToDto());
         }).RequireAuthorization(Policy.For(Permissions.MembersApplicationsWrite));
 
-        apps.MapPost("/{id}/reject", async (string id, [FromBody] ApplicationReviewDto body, AppDbContext db) =>
+        apps.MapPost("/{id}/reject", async (string id, [FromBody] ApplicationReviewDto body, ClaimsPrincipal user, AppDbContext db) =>
         {
             var entity = await db.MemberApplications.FindAsync(id);
             if (entity is null) return Results.NotFound();
@@ -83,7 +114,8 @@ public static class MembershipEndpoints
 
             entity.Status = "Rejected";
             entity.ReviewedAt = DateTime.UtcNow.ToString("o");
-            entity.ReviewedBy = body?.Reviewer;
+            // A4: reviewer is server-stamped from the principal; body.Reviewer is ignored.
+            entity.ReviewedBy = ReviewerFrom(user);
             entity.ReviewNote = body?.Note;
             await db.SaveChangesAsync();
             return Results.Ok(entity.ToDto());

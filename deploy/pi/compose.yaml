@@ -23,7 +23,8 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - fairway-hq
+      fairway-hq:
+        condition: service_healthy
     labels:
       io.containers.autoupdate: registry
 
@@ -43,11 +44,29 @@ services:
       # IANA zone (America/Chicago, America/Denver, America/Los_Angeles,
       # America/New_York, etc.).
       TZ: America/Chicago
-      # OIDC validation. Leave these unset until you've stood up an IdP
-      # and configured Caddy's /auth/* route. Once set, the API
-      # enforces tokens signed by this issuer.
-      # Authentication__Keycloak__Authority: "https://fairway.local:8443/auth/realms/fairway-hq"
-      # Authentication__Keycloak__Audience: "fairway-hq-spa"
+      # Run as Production. Combined with the required auth vars below, the
+      # API refuses to start with an empty Authority in Production — there
+      # is no silent "no-auth" prod mode.
+      ASPNETCORE_ENVIRONMENT: Production
+      # OIDC validation — REQUIRED in production. These are sourced from an
+      # .env file sitting next to this compose file (see setup-pi.md §3).
+      # The `:?` syntax makes the stack refuse to start if either is unset
+      # or empty, so a course can never accidentally come up unauthenticated.
+      #   FAIRWAY_AUTH_AUTHORITY=https://fairway.local:8443/auth/realms/fairway-hq
+      #   FAIRWAY_AUTH_AUDIENCE=fairway-hq-spa
+      Authentication__Keycloak__Authority: ${FAIRWAY_AUTH_AUTHORITY:?set FAIRWAY_AUTH_AUTHORITY in /opt/fairway-hq/.env — prod requires OIDC (see setup-pi.md)}
+      Authentication__Keycloak__Audience: ${FAIRWAY_AUTH_AUDIENCE:?set FAIRWAY_AUTH_AUDIENCE in /opt/fairway-hq/.env — prod requires OIDC (see setup-pi.md)}
+    # Declared here (not just in the image): Podman runs OCI-format images,
+    # which ignore the Containerfile HEALTHCHECK. This compose-level probe
+    # uses the bundled curl-less .NET probe so `podman ps` and the
+    # podman-auto-update health gate can tell a wedged container from a
+    # healthy one and roll back a bad image instead of leaving it running.
+    healthcheck:
+      test: ["CMD", "dotnet", "/healthcheck/HealthCheck.dll", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
     labels:
       io.containers.autoupdate: registry
 

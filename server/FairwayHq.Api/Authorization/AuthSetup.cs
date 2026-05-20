@@ -58,11 +58,9 @@ public static class AuthSetup
             // iss claim is validated against Authority; signing keys come from the
             // internal MetadataAddress. No TLS hacks needed — the API talks plain
             // HTTP to the IdP over a trusted internal network.
-            var section = config.GetSection("Authentication:Keycloak");
-            var authority = section["Authority"];
-            var metadataAddress = section["MetadataAddress"];
-            var audience = section["Audience"] ?? "fairway-hq-spa";
-            var requireHttps = section.GetValue("RequireHttps", env.IsProduction());
+            // A1: Validate critical config and fail closed at startup.
+            var (authority, metadataAddress, audience, requireHttps) =
+                ValidateKeycloakConfig(config, env);
 
             services
                 .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -83,24 +81,22 @@ public static class AuthSetup
                     }
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
-                        ValidateIssuer = !string.IsNullOrEmpty(authority),
-                        // Pin ValidIssuer to the configured Authority
-                        // so issuer validation doesn't silently follow
-                        // whatever the metadata document says. If a
-                        // misconfigured IdP starts emitting a different
-                        // "issuer" in its discovery doc, we fail closed
-                        // rather than accept tokens with the new value.
+                        // A1: Always validate the issuer against an explicit
+                        // expected value derived from Authority — never gate
+                        // this on whether Authority is set. ValidateKeycloakConfig
+                        // guarantees Authority is non-empty in Production.
+                        ValidateIssuer = true,
                         ValidIssuer = authority,
-                        // Keycloak doesn't put the client id in `aud` by
-                        // default — its single-client setup uses `azp`
-                        // (Authorized Party) instead. We accept tokens
-                        // whose `aud` OR `azp` matches the configured
-                        // audience so operators don't have to add a
-                        // Keycloak audience-mapper just to get going.
-                        ValidateAudience = false,
+                        // A1: Always validate the audience. Keycloak doesn't
+                        // put the client id in `aud` by default — its
+                        // single-client setup uses `azp` (Authorized Party).
+                        // We accept tokens whose `aud` OR `azp` matches the
+                        // configured audience, but an empty configured
+                        // audience is a hard startup failure (see
+                        // ValidateKeycloakConfig), never an accept-all.
+                        ValidateAudience = true,
                         AudienceValidator = (audiences, securityToken, _) =>
                         {
-                            if (string.IsNullOrEmpty(audience)) return true;
                             if (audiences.Any(a => string.Equals(a, audience, StringComparison.Ordinal)))
                                 return true;
                             // Fall back to azp. .NET 10's JwtBearer uses
@@ -116,7 +112,7 @@ public static class AuthSetup
                                         && lv is string ls ? ls : null,
                                 _ => null,
                             };
-                            return azp == audience;
+                            return string.Equals(azp, audience, StringComparison.Ordinal);
                         },
                         ValidateLifetime = true,
                         ValidateIssuerSigningKey = true,
@@ -144,5 +140,44 @@ public static class AuthSetup
             // .AllowAnonymous().
             options.FallbackPolicy = options.DefaultPolicy;
         });
+    }
+
+    /// <summary>
+    /// A1: Reads + validates Keycloak auth configuration, failing closed
+    /// (throwing) on a misconfiguration that would otherwise register a
+    /// permissive bearer scheme. Extracted as a pure static so it can be
+    /// unit-tested against an in-memory configuration without standing up
+    /// a real Keycloak.
+    /// </summary>
+    /// <returns>(authority, metadataAddress, audience, requireHttps)</returns>
+    public static (string? Authority, string? MetadataAddress, string Audience, bool RequireHttps)
+        ValidateKeycloakConfig(IConfiguration config, IHostEnvironment env)
+    {
+        var section = config.GetSection("Authentication:Keycloak");
+        var authority = section["Authority"];
+        var metadataAddress = section["MetadataAddress"];
+        var audience = section["Audience"] ?? "fairway-hq-spa";
+        var requireHttps = section.GetValue("RequireHttps", env.IsProduction());
+
+        // Fail closed loudly: a Production deployment with no issuer would
+        // otherwise register a JwtBearer scheme that can't validate `iss`,
+        // silently weakening token validation.
+        if (env.IsProduction() && string.IsNullOrWhiteSpace(authority))
+        {
+            throw new InvalidOperationException(
+                "Authentication:Keycloak:Authority must be configured in Production. " +
+                "Refusing to start with an unvalidated issuer (fail closed).");
+        }
+
+        // An empty audience must be a hard failure rather than an
+        // accept-all AudienceValidator.
+        if (string.IsNullOrWhiteSpace(audience))
+        {
+            throw new InvalidOperationException(
+                "Authentication:Keycloak:Audience must be a non-empty value. " +
+                "Refusing to start with audience validation effectively disabled.");
+        }
+
+        return (authority, metadataAddress, audience, requireHttps);
     }
 }

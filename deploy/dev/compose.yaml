@@ -29,16 +29,29 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - keycloak
-      - fairway-hq
+      keycloak:
+        condition: service_started
+      fairway-hq:
+        condition: service_healthy
 
   keycloak:
+    # =====================================================================
+    # DEV ONLY — NOT DEPLOYABLE. This Keycloak runs `start-dev` with an
+    # in-memory H2 DB, demo users whose password == username, and a local
+    # admin account. It is for local development on a trusted machine only.
+    # Do NOT copy this service into a production/Pi deployment. See
+    # setup-dev.md. The admin password is sourced from KC_ADMIN_PASSWORD
+    # (no committed default) and the admin port is bound to loopback.
+    # =====================================================================
     image: quay.io/keycloak/keycloak:26.0
     container_name: fairway-keycloak
     command: ["start-dev", "--import-realm"]
     environment:
       KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      # No committed default — set KC_ADMIN_PASSWORD in deploy/dev/.env (or
+      # your shell). `${VAR:?}` makes the stack refuse to start if unset, so
+      # there is no baked-in admin/admin credential in the repo.
+      KEYCLOAK_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:?set KC_ADMIN_PASSWORD (e.g. in deploy/dev/.env) — dev Keycloak admin password, see setup-dev.md}
       # Put everything under /auth so the proxy can route /auth/* to
       # Keycloak. Without this, Keycloak would serve realms at root.
       KC_HTTP_RELATIVE_PATH: /auth
@@ -64,9 +77,9 @@ services:
       # validation against the public issuer still works.
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
     ports:
-      # Kept exposed so the admin console at http://localhost:8081/auth/admin
-      # works without going through the proxy.
-      - "8081:8080"
+      # Bound to loopback so the admin console at http://localhost:8081/auth/admin
+      # works from this host only — never reachable from the LAN.
+      - "127.0.0.1:8081:8080"
     volumes:
       - ./keycloak:/opt/keycloak/data/import:Z
     restart: unless-stopped
@@ -105,6 +118,18 @@ services:
       # validates the token's iss against the public URL correctly.
       Authentication__Keycloak__MetadataAddress: http://fairway-keycloak:8080/auth/realms/fairway-hq/.well-known/openid-configuration
       Authentication__Keycloak__Audience: fairway-hq-spa
+    # Compose-level healthcheck. Podman builds the image in OCI format, which
+    # silently drops the Containerfile's HEALTHCHECK directive — so we declare
+    # it here, where it works regardless of image format. Reuses the bundled
+    # curl-less .NET probe (the chiseled runtime has no shell/curl). This is
+    # what makes `podman ps` / `podman healthcheck run fairway-hq` report
+    # health, and what the caddy `service_healthy` dependency waits on.
+    healthcheck:
+      test: ["CMD", "dotnet", "/healthcheck/HealthCheck.dll", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
 
 volumes:
   caddy_data:
