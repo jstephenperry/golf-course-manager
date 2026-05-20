@@ -1,3 +1,4 @@
+using FairwayHq.Api.Authorization;
 using FairwayHq.Api.Data;
 using FairwayHq.Api.Models;
 using Microsoft.EntityFrameworkCore;
@@ -12,13 +13,13 @@ public static class OpsEndpoints
         {
             status = "ok",
             time = DateTime.UtcNow.ToString("o")
-        })).WithTags("Ops");
+        })).WithTags("Ops").AllowAnonymous();
 
         app.MapGet("/api/snapshot", async (AppDbContext db) =>
         {
             var snap = await BuildSnapshot(db);
             return Results.Ok(snap);
-        }).WithTags("Ops");
+        }).WithTags("Ops").RequireAuthorization(Policy.For(Permissions.SnapshotExport));
 
         app.MapPost("/api/snapshot/restore", async (DataSnapshot body, AppDbContext db) =>
         {
@@ -185,7 +186,7 @@ public static class OpsEndpoints
             await db.SaveChangesAsync();
             await tx.CommitAsync();
             return Results.Ok(new { restored = true });
-        }).WithTags("Ops");
+        }).WithTags("Ops").RequireAuthorization(Policy.For(Permissions.SnapshotRestore));
 
         app.MapPost("/api/reset", async (AppDbContext db) =>
         {
@@ -193,13 +194,13 @@ public static class OpsEndpoints
             await ClearAll(db);
             Seed.EnsureSeeded(db);
             return Results.Ok(new { reset = true });
-        }).WithTags("Ops");
+        }).WithTags("Ops").RequireAuthorization(Policy.For(Permissions.SystemClear));
 
         app.MapPost("/api/clear", async (AppDbContext db) =>
         {
             await ClearAll(db);
             return Results.Ok(new { cleared = true });
-        }).WithTags("Ops");
+        }).WithTags("Ops").RequireAuthorization(Policy.For(Permissions.SystemClear));
     }
 
     public static async Task<DataSnapshot> BuildSnapshot(AppDbContext db)

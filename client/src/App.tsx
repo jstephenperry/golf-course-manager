@@ -1,5 +1,6 @@
 import { Suspense, lazy } from "react";
 import { Route, Routes } from "react-router-dom";
+import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Layout } from "./components/Layout";
 import { ToasterProvider } from "./components/Toaster";
@@ -38,6 +39,15 @@ const Maintenance = lazy(() =>
 const ImportPage = lazy(() =>
   import("./pages/Import").then((m) => ({ default: m.Import })),
 );
+const Scorecard = lazy(() =>
+  import("./pages/Scorecard").then((m) => ({ default: m.Scorecard })),
+);
+const Login = lazy(() =>
+  import("./pages/Login").then((m) => ({ default: m.Login })),
+);
+const AuthCallback = lazy(() =>
+  import("./pages/AuthCallback").then((m) => ({ default: m.AuthCallback })),
+);
 
 function PageFallback() {
   return (
@@ -54,103 +64,132 @@ export default function App() {
       <ToasterProvider>
         <StoreProvider>
           <Routes>
-            <Route element={<Layout />}>
-              <Route
-                index
-                element={
-                  <Suspense fallback={<PageFallback />}>
-                    <Dashboard />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="tee-times"
-                element={
-                  <Suspense fallback={<PageFallback />}>
-                    <TeeTimes />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="members"
-                element={
-                  <Suspense fallback={<PageFallback />}>
-                    <Members />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="members/:memberId"
-                element={
-                  <Suspense fallback={<PageFallback />}>
-                    <MemberDetail />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="courses"
-                element={
-                  <Suspense fallback={<PageFallback />}>
-                    <Courses />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="staff"
-                element={
-                  <Suspense fallback={<PageFallback />}>
-                    <Staff />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="pro-shop"
-                element={
-                  <Suspense fallback={<PageFallback />}>
-                    <ProShop />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="tabs"
-                element={
-                  <Suspense fallback={<PageFallback />}>
-                    <Tabs />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="tournaments"
-                element={
-                  <Suspense fallback={<PageFallback />}>
-                    <Tournaments />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="maintenance"
-                element={
-                  <Suspense fallback={<PageFallback />}>
-                    <Maintenance />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="import"
-                element={
-                  <Suspense fallback={<PageFallback />}>
-                    <ImportPage />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="*"
-                element={
-                  <Suspense fallback={<PageFallback />}>
-                    <Dashboard />
-                  </Suspense>
-                }
-              />
+            {/* Public routes — no auth gate. */}
+            <Route
+              path="/login"
+              element={
+                <Suspense fallback={<PageFallback />}>
+                  <Login />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/oidc/callback"
+              element={
+                <Suspense fallback={<PageFallback />}>
+                  <AuthCallback />
+                </Suspense>
+              }
+            />
+
+            {/* Everything else requires a valid session. */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<Layout />}>
+                <Route
+                  index
+                  element={
+                    <Suspense fallback={<PageFallback />}>
+                      <Dashboard />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="tee-times"
+                  element={
+                    <Suspense fallback={<PageFallback />}>
+                      <TeeTimes />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="members"
+                  element={
+                    <Suspense fallback={<PageFallback />}>
+                      <Members />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="members/:memberId"
+                  element={
+                    <Suspense fallback={<PageFallback />}>
+                      <MemberDetail />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="courses"
+                  element={
+                    <Suspense fallback={<PageFallback />}>
+                      <Courses />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="staff"
+                  element={
+                    <Suspense fallback={<PageFallback />}>
+                      <Staff />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="pro-shop"
+                  element={
+                    <Suspense fallback={<PageFallback />}>
+                      <ProShop />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="tabs"
+                  element={
+                    <Suspense fallback={<PageFallback />}>
+                      <Tabs />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="tournaments"
+                  element={
+                    <Suspense fallback={<PageFallback />}>
+                      <Tournaments />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="maintenance"
+                  element={
+                    <Suspense fallback={<PageFallback />}>
+                      <Maintenance />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="import"
+                  element={
+                    <Suspense fallback={<PageFallback />}>
+                      <ImportPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="courses/:courseId/scorecard"
+                  element={
+                    <Suspense fallback={<PageFallback />}>
+                      <Scorecard />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="*"
+                  element={
+                    <Suspense fallback={<PageFallback />}>
+                      <Dashboard />
+                    </Suspense>
+                  }
+                />
+              </Route>
             </Route>
           </Routes>
         </StoreProvider>

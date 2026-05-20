@@ -253,7 +253,7 @@ export function MemberDetail() {
         {/* Activity stats */}
         <div className="card">
           <h3 style={{ marginTop: 0 }}>Activity</h3>
-          <div className="grid cols-3">
+          <div className="grid cols-4">
             <div className="kpi">
               <span className="label">Lifetime rounds</span>
               <span className="value">
@@ -266,6 +266,23 @@ export function MemberDetail() {
                 {overview
                   ? (overview.lastPlayedDate ?? "Never")
                   : "—"}
+              </span>
+            </div>
+            <div
+              className="kpi"
+              title="Tee times this member booked but didn't arrive for"
+            >
+              <span className="label">No-shows</span>
+              <span
+                className="value"
+                style={{
+                  color:
+                    overview && overview.noShowCount > 0
+                      ? "var(--danger)"
+                      : undefined,
+                }}
+              >
+                {overview ? overview.noShowCount : "—"}
               </span>
             </div>
             <div className="kpi">

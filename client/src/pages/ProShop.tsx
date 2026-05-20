@@ -1,8 +1,14 @@
 import { useMemo, useState } from "react";
+import {
+  PRODUCTS_STOCK,
+  PRODUCTS_WRITE,
+} from "../auth/permissions";
+import { RequirePermission } from "../auth/RequirePermission";
 import { Modal } from "../components/Modal";
 import { useToaster } from "../components/Toaster";
 import { useStore } from "../data/store";
 import type { Product, ProductCategory } from "../data/types";
+import { formatCount, formatMoney } from "../data/utils";
 
 const CATEGORIES: ProductCategory[] = [
   "Clubs",
@@ -90,15 +96,15 @@ export function ProShop() {
       <div className="grid cols-3">
         <div className="kpi accent">
           <span className="label">Inventory Value (cost)</span>
-          <span className="value">${totals.inventoryValue.toFixed(2)}</span>
+          <span className="value">{formatMoney(totals.inventoryValue)}</span>
         </div>
         <div className="kpi">
           <span className="label">Retail Value</span>
-          <span className="value">${totals.retailValue.toFixed(2)}</span>
+          <span className="value">{formatMoney(totals.retailValue)}</span>
         </div>
         <div className="kpi">
           <span className="label">Items At/Below Reorder</span>
-          <span className="value">{totals.lowStock}</span>
+          <span className="value">{formatCount(totals.lowStock)}</span>
         </div>
       </div>
 
@@ -123,15 +129,17 @@ export function ProShop() {
               ))}
             </select>
           </div>
-          <button
-            className="btn"
-            onClick={() => {
-              setForm(blank());
-              setCreating(true);
-            }}
-          >
-            + Add Product
-          </button>
+          <RequirePermission permission={PRODUCTS_WRITE}>
+            <button
+              className="btn"
+              onClick={() => {
+                setForm(blank());
+                setCreating(true);
+              }}
+            >
+              + Add Product
+            </button>
+          </RequirePermission>
         </div>
 
         {filtered.length === 0 ? (
@@ -162,16 +170,18 @@ export function ProShop() {
                   <td>
                     <span className="pill">{p.category}</span>
                   </td>
-                  <td>${p.price.toFixed(2)}</td>
-                  <td>${p.cost.toFixed(2)}</td>
+                  <td>{formatMoney(p.price)}</td>
+                  <td>{formatMoney(p.cost)}</td>
                   <td>
                     <div className="row" style={{ gap: 6 }}>
-                      <button
-                        className="btn sm secondary"
-                        onClick={() => adjustStock(p.id, -1)}
-                      >
-                        −
-                      </button>
+                      <RequirePermission permission={PRODUCTS_STOCK}>
+                        <button
+                          className="btn sm secondary"
+                          onClick={() => adjustStock(p.id, -1)}
+                        >
+                          −
+                        </button>
+                      </RequirePermission>
                       <span
                         className={`pill ${
                           p.stock === 0
@@ -181,28 +191,32 @@ export function ProShop() {
                               : "green"
                         }`}
                       >
-                        {p.stock}
+                        {formatCount(p.stock)}
                       </span>
-                      <button
-                        className="btn sm secondary"
-                        onClick={() => adjustStock(p.id, 1)}
-                      >
-                        +
-                      </button>
+                      <RequirePermission permission={PRODUCTS_STOCK}>
+                        <button
+                          className="btn sm secondary"
+                          onClick={() => adjustStock(p.id, 1)}
+                        >
+                          +
+                        </button>
+                      </RequirePermission>
                     </div>
                   </td>
-                  <td>{p.reorderLevel}</td>
+                  <td>{formatCount(p.reorderLevel)}</td>
                   <td>
                     <div className="table-actions">
-                      <button
-                        className="btn sm secondary"
-                        onClick={() => {
-                          setEditing(p);
-                          setForm({ ...p });
-                        }}
-                      >
-                        Edit
-                      </button>
+                      <RequirePermission permission={PRODUCTS_WRITE}>
+                        <button
+                          className="btn sm secondary"
+                          onClick={() => {
+                            setEditing(p);
+                            setForm({ ...p });
+                          }}
+                        >
+                          Edit
+                        </button>
+                      </RequirePermission>
                     </div>
                   </td>
                 </tr>

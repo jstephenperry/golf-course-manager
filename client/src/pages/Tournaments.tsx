@@ -4,6 +4,7 @@ import { useToaster } from "../components/Toaster";
 import { useStore } from "../data/store";
 import { isPlayable } from "../data/courseDerived";
 import type { Tournament } from "../data/types";
+import { isoDate } from "../data/utils";
 
 const FORMATS: Tournament["format"][] = [
   "Stroke Play",
@@ -15,7 +16,7 @@ const FORMATS: Tournament["format"][] = [
 
 const blank = (courseId: string): Omit<Tournament, "id"> => ({
   name: "",
-  date: new Date().toISOString().slice(0, 10),
+  date: isoDate(new Date()),
   format: "Stroke Play",
   courseId,
   entryFee: 50,

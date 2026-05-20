@@ -23,6 +23,7 @@ export interface MemberOverview {
   member: Member;
   lastPlayedDate: string | null;
   lifetimeRounds: number;
+  noShowCount: number;
   recentRounds: TeeTime[];
 }
 
@@ -170,7 +171,7 @@ export interface TeeTime {
   courseId: string;
   players: string[];
   cart: boolean;
-  status: "Booked" | "Checked In" | "Completed" | "Cancelled";
+  status: "Booked" | "Checked In" | "Completed" | "Cancelled" | "No Show";
   notes: string;
 }
 

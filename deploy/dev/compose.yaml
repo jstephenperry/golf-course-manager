@@ -1,0 +1,112 @@
+# Fully-containerized dev stack: Caddy (proxy + TLS), Keycloak (IdP),
+# and the Fairway HQ app itself (API + bundled SPA). Mirrors the prod
+# topology exactly — the only difference is that the IdP runs alongside
+# in this compose rather than externally.
+#
+#   podman compose up -d --build
+#   # first boot only: extract + trust Caddy's CA — see setup-dev.md
+#   # then open https://localhost:8443/
+#
+# Hot reload is intentionally NOT supported here. Edits to app code
+# require `podman compose build fairway-hq && podman compose up -d`.
+# That's the cost of running the production topology locally. For
+# fast-iteration work, you can still run `just dev-server` +
+# `just dev-client` natively — but be aware that Caddy in this compose
+# proxies to the containerized app on the compose network, not to the
+# host's dev ports, so those native servers would need their own
+# direct browser access (http://localhost:5173 + http://localhost:5210).
+
+services:
+  caddy:
+    image: docker.io/library/caddy:2-alpine
+    container_name: fairway-caddy
+    restart: unless-stopped
+    ports:
+      # Single TLS entry point. Mirrors prod.
+      - "8443:8443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:Z,ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - keycloak
+      - fairway-hq
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: fairway-keycloak
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      # Put everything under /auth so the proxy can route /auth/* to
+      # Keycloak. Without this, Keycloak would serve realms at root.
+      KC_HTTP_RELATIVE_PATH: /auth
+      # Tokens' iss claim is derived from this and the API validates
+      # against the same value. The /auth path must be included so the
+      # issuer URL matches what KC_HTTP_RELATIVE_PATH serves.
+      KC_HOSTNAME: https://localhost:8443/auth
+      KC_HOSTNAME_STRICT: false
+      # Trust X-Forwarded-* headers from the reverse proxy. Without this,
+      # Quarkus uses the raw socket (which sees HTTP from Caddy →
+      # Keycloak in the compose net), Keycloak's view of the request
+      # protocol gets out of sync with KC_HOSTNAME, and cookie flags
+      # (Secure, SameSite, Path) end up misaligned with the browser's
+      # actual HTTPS request — manifests as "cookie_not_found" on the
+      # login form submit.
+      KC_PROXY_HEADERS: xforwarded
+      # Backchannel URLs (jwks_uri, token_endpoint when called by an API)
+      # use the REQUEST host instead of KC_HOSTNAME. With this on, when
+      # the API hits Keycloak via the internal compose hostname, the
+      # discovery doc's jwks_uri is also the internal URL — so JwtBearer
+      # can actually fetch the signing keys. The public-facing issuer
+      # claim in tokens is still derived from KC_HOSTNAME, so token
+      # validation against the public issuer still works.
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+    ports:
+      # Kept exposed so the admin console at http://localhost:8081/auth/admin
+      # works without going through the proxy.
+      - "8081:8080"
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:Z
+    restart: unless-stopped
+
+  fairway-hq:
+    build:
+      # Build from the repo root — relative to this compose file.
+      context: ../../
+      dockerfile: Containerfile
+      args:
+        # Vite bakes these into the SPA bundle at build time. The
+        # Keycloak URL the SPA hits is the PROXY url (https://localhost:8443/auth)
+        # because the browser is on the host, not on the compose network.
+        VITE_KEYCLOAK_URL: https://localhost:8443/auth
+        VITE_KEYCLOAK_REALM: fairway-hq
+        VITE_KEYCLOAK_CLIENT_ID: fairway-hq-spa
+    image: fairway-hq:dev
+    container_name: fairway-hq
+    restart: unless-stopped
+    expose:
+      - "8080"
+    volumes:
+      - fairway_data:/app/data
+    environment:
+      TZ: America/Chicago
+      ASPNETCORE_ENVIRONMENT: Development
+      # Public issuer URL — the value the SPA's tokens carry in their
+      # iss claim, and what the API validates against.
+      Authentication__Keycloak__Authority: https://localhost:8443/auth/realms/fairway-hq
+      # Backchannel for discovery doc + JWKS fetch. The API talks to
+      # Keycloak directly over the compose network using its container
+      # hostname + relative-path-mapped /auth prefix. Plain HTTP is
+      # fine here because traffic never leaves the docker network.
+      # Keycloak still announces the PUBLIC issuer in this document
+      # (because KC_HOSTNAME is set to the proxy URL), so the API
+      # validates the token's iss against the public URL correctly.
+      Authentication__Keycloak__MetadataAddress: http://fairway-keycloak:8080/auth/realms/fairway-hq/.well-known/openid-configuration
+      Authentication__Keycloak__Audience: fairway-hq-spa
+
+volumes:
+  caddy_data:
+  caddy_config:
+  fairway_data:

@@ -103,7 +103,7 @@ interface StoreApi {
   loading: boolean;
   initialized: boolean;
   error: string | null;
-  refresh: () => Promise<void>;
+  refresh: (options?: { silent?: boolean }) => Promise<void>;
 
   members: ResourceActions<Member> & {
     suspend: (id: string, note?: string) => Promise<Member | null>;
@@ -193,8 +193,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [toaster],
   );
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  const refresh = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent === true;
+    if (!silent) setLoading(true);
     try {
       const snap = await api.snapshot();
       setData({
@@ -232,12 +233,62 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
       console.error(err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     refresh();
+  }, [refresh]);
+
+  // Background polling — keeps the store fresh so a staffer doesn't see
+  // stale data while a manager is editing tee times on another machine.
+  // Pauses when the tab is hidden (no point burning API calls / battery)
+  // and resumes immediately when visibility returns. Uses the silent
+  // variant so the sidebar status pill doesn't constantly flicker.
+  const POLL_INTERVAL_MS = 30_000;
+  useEffect(() => {
+    let timer: number | undefined;
+    let inFlight = false;
+
+    const poll = async () => {
+      if (document.hidden || inFlight) return;
+      inFlight = true;
+      try {
+        await refresh({ silent: true });
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    const start = () => {
+      if (timer !== undefined) return;
+      timer = window.setInterval(poll, POLL_INTERVAL_MS);
+    };
+    const stop = () => {
+      if (timer !== undefined) {
+        clearInterval(timer);
+        timer = undefined;
+      }
+    };
+
+    const onVisibility = () => {
+      if (document.hidden) {
+        stop();
+      } else {
+        // Pull once on visibility return so the user sees latest data
+        // immediately rather than waiting up to the full poll interval.
+        void poll();
+        start();
+      }
+    };
+
+    start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [refresh]);
 
   const upsert = useCallback(

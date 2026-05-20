@@ -1,0 +1,138 @@
+{
+  "realm": "fairway-hq",
+  "enabled": true,
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "resetPasswordAllowed": false,
+  "rememberMe": false,
+  "verifyEmail": false,
+  "sslRequired": "external",
+  "accessTokenLifespan": 900,
+  "roles": {
+    "realm": [
+      { "name": "owner", "description": "Course owner. All permissions including destructive ops." },
+      { "name": "manager", "description": "Head pro / GM. All operations except destructive system ops and remote admin." },
+      { "name": "pro", "description": "PGA pro. Tee times, lessons, member updates (no suspend), tabs, tournaments." },
+      { "name": "assistant-pro", "description": "Junior pro / starter. Tee times read+checkin+complete, tabs, member read." },
+      { "name": "pro-shop", "description": "Pro shop / front counter. Tabs, products, stock, tee-time check-in." },
+      { "name": "greenkeeper", "description": "Grounds crew. Maintenance tasks, tee-time read-only, course read-only." },
+      { "name": "starter", "description": "Tee sheet check-in only. Single-purpose login for a kiosk near the first tee." }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "fairway-hq-spa",
+      "name": "Fairway HQ SPA",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "rootUrl": "http://localhost:5173",
+      "baseUrl": "http://localhost:5173",
+      "redirectUris": [
+        "http://localhost:5173/*",
+        "http://localhost:5174/*",
+        "https://localhost:8443/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "https://localhost:8443"
+      ],
+      "protocol": "openid-connect",
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/*##http://localhost:5174/*##https://localhost:8443/*"
+      },
+      "fullScopeAllowed": true
+    }
+  ],
+  "users": [
+    {
+      "username": "owner",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Olivia",
+      "lastName": "Owner",
+      "email": "owner@fairway-hq.local",
+      "credentials": [
+        { "type": "password", "value": "owner", "temporary": false }
+      ],
+      "realmRoles": ["owner"]
+    },
+    {
+      "username": "manager",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Morgan",
+      "lastName": "Manager",
+      "email": "manager@fairway-hq.local",
+      "credentials": [
+        { "type": "password", "value": "manager", "temporary": false }
+      ],
+      "realmRoles": ["manager"]
+    },
+    {
+      "username": "pro",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Parker",
+      "lastName": "Pro",
+      "email": "pro@fairway-hq.local",
+      "credentials": [
+        { "type": "password", "value": "pro", "temporary": false }
+      ],
+      "realmRoles": ["pro"]
+    },
+    {
+      "username": "assistant-pro",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Avery",
+      "lastName": "Assistant",
+      "email": "assistant-pro@fairway-hq.local",
+      "credentials": [
+        { "type": "password", "value": "assistant-pro", "temporary": false }
+      ],
+      "realmRoles": ["assistant-pro"]
+    },
+    {
+      "username": "pro-shop",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Sam",
+      "lastName": "Shop",
+      "email": "pro-shop@fairway-hq.local",
+      "credentials": [
+        { "type": "password", "value": "pro-shop", "temporary": false }
+      ],
+      "realmRoles": ["pro-shop"]
+    },
+    {
+      "username": "greenkeeper",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Greer",
+      "lastName": "Greenkeeper",
+      "email": "greenkeeper@fairway-hq.local",
+      "credentials": [
+        { "type": "password", "value": "greenkeeper", "temporary": false }
+      ],
+      "realmRoles": ["greenkeeper"]
+    },
+    {
+      "username": "starter",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Skyler",
+      "lastName": "Starter",
+      "email": "starter@fairway-hq.local",
+      "credentials": [
+        { "type": "password", "value": "starter", "temporary": false }
+      ],
+      "realmRoles": ["starter"]
+    }
+  ]
+}

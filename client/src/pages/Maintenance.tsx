@@ -1,8 +1,11 @@
 import { useMemo, useState } from "react";
+import { MAINTENANCE_WRITE } from "../auth/permissions";
+import { RequirePermission } from "../auth/RequirePermission";
 import { Modal } from "../components/Modal";
 import { useToaster } from "../components/Toaster";
 import { useStore } from "../data/store";
 import type { MaintenanceCategory, MaintenanceTask } from "../data/types";
+import { isoDate } from "../data/utils";
 
 const CATEGORIES: MaintenanceCategory[] = [
   "Mowing",
@@ -20,7 +23,7 @@ const blank = (courseId: string, staffId: string): Omit<MaintenanceTask, "id"> =
   category: "Greens",
   courseId,
   assignedTo: staffId,
-  dueDate: new Date().toISOString().slice(0, 10),
+  dueDate: isoDate(new Date()),
   priority: "Medium",
   status: "Open",
   notes: "",
@@ -121,17 +124,19 @@ export function Maintenance() {
               ))}
             </select>
           </div>
-          <button
-            className="btn"
-            onClick={() => {
-              setForm(
-                blank(data.courses[0]?.id ?? "", data.staff[0]?.id ?? ""),
-              );
-              setCreating(true);
-            }}
-          >
-            + New Task
-          </button>
+          <RequirePermission permission={MAINTENANCE_WRITE}>
+            <button
+              className="btn"
+              onClick={() => {
+                setForm(
+                  blank(data.courses[0]?.id ?? "", data.staff[0]?.id ?? ""),
+                );
+                setCreating(true);
+              }}
+            >
+              + New Task
+            </button>
+          </RequirePermission>
         </div>
 
         {filtered.length === 0 ? (
@@ -198,15 +203,17 @@ export function Maintenance() {
                   </td>
                   <td>
                     <div className="table-actions">
-                      <button
-                        className="btn sm secondary"
-                        onClick={() => {
-                          setEditing(m);
-                          setForm({ ...m });
-                        }}
-                      >
-                        Edit
-                      </button>
+                      <RequirePermission permission={MAINTENANCE_WRITE}>
+                        <button
+                          className="btn sm secondary"
+                          onClick={() => {
+                            setEditing(m);
+                            setForm({ ...m });
+                          }}
+                        >
+                          Edit
+                        </button>
+                      </RequirePermission>
                     </div>
                   </td>
                 </tr>

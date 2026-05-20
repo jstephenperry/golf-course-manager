@@ -1,0 +1,37 @@
+[
+  {
+    "id": "crs_academy_loop",
+    "name": "Academy Loop",
+    "frontNineId": "nin_forge",
+    "backNineId": "nin_crucible",
+    "rating": 58.4,
+    "slope": 96,
+    "status": "Open",
+    "openTime": "06:00",
+    "closeTime": "20:00",
+    "notes": "Development pairing — wedges out, short irons home. The default learner round."
+  },
+  {
+    "id": "crs_tournament_loop",
+    "name": "Tournament Loop",
+    "frontNineId": "nin_crucible",
+    "backNineId": "nin_proving",
+    "rating": 63.2,
+    "slope": 105,
+    "status": "Open",
+    "openTime": "06:30",
+    "closeTime": "19:00",
+    "notes": "Competition-grade pairing. Hosts the Junior Development Open and Wedge Wars."
+  },
+  {
+    "id": "crs_scoring_nine",
+    "name": "The Forge (Walking Nine)",
+    "frontNineId": "nin_forge",
+    "rating": 28.6,
+    "slope": 92,
+    "status": "Open",
+    "openTime": "06:00",
+    "closeTime": "20:30",
+    "notes": "Walking-only 9-hole loop. Twilight rate after 17:00. Junior-friendly."
+  }
+]

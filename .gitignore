@@ -3,6 +3,9 @@ node_modules/
 dist/
 .vite/
 
+# TS incremental build cache
+*.tsbuildinfo
+
 # .NET
 bin/
 obj/

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using FairwayHq.Api.Authorization;
 using FairwayHq.Api.Data;
 using FairwayHq.Api.Endpoints;
 using FairwayHq.Api.Services;
@@ -29,6 +30,10 @@ builder.Services.Configure<DunningOptions>(
     builder.Configuration.GetSection(DunningOptions.Section));
 builder.Services.AddSingleton<DunningService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<DunningService>());
+
+// Authentication + authorization: JWT bearer against Keycloak in prod /
+// dev; an in-memory test handler in the Testing env. See ADR 0003.
+builder.Services.AddFairwayAuth(builder.Configuration, builder.Environment);
 
 const string DevCors = "DevCors";
 builder.Services.AddCors(o =>
@@ -70,6 +75,12 @@ app.UseExceptionHandler(errApp => errApp.Run(async context =>
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
+// Auth pipeline — must come after UseExceptionHandler / static files so
+// public assets (the SPA shell, favicon, etc.) load without a token,
+// but before route mapping so endpoints can enforce policies.
+app.UseAuthentication();
+app.UseAuthorization();
+
 // ---------- Routes ----------
 app.MapAll();
 app.MapNines();
@@ -80,7 +91,9 @@ app.MapLedger();
 app.MapImport();
 app.MapOps();
 
-// SPA fallback for non-/api paths: serve index.html
+// SPA fallback for non-/api paths: serve index.html.
+// MUST stay anonymous — the SPA itself hosts the login page, so
+// requesting "/" before authentication is the normal happy path.
 app.MapFallback(async context =>
 {
     if (context.Request.Path.StartsWithSegments("/api"))
@@ -99,7 +112,7 @@ app.MapFallback(async context =>
         context.Response.StatusCode = StatusCodes.Status404NotFound;
         await context.Response.WriteAsync("SPA bundle not present. Build the client first.");
     }
-});
+}).AllowAnonymous();
 
 // ---------- DB init ----------
 using (var scope = app.Services.CreateScope())

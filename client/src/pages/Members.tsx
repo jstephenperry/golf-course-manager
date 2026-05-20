@@ -1,5 +1,10 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  MEMBERS_SUSPEND,
+  MEMBERS_WRITE,
+} from "../auth/permissions";
+import { RequirePermission } from "../auth/RequirePermission";
 import { Modal } from "../components/Modal";
 import { useToaster } from "../components/Toaster";
 import { useStore } from "../data/store";
@@ -9,7 +14,7 @@ import type {
   MemberStatus,
   MembershipTier,
 } from "../data/types";
-import { formatMoney } from "../data/utils";
+import { formatMoney, isoDate } from "../data/utils";
 
 const TIERS: MembershipTier[] = ["Social", "Weekday", "Full", "Corporate"];
 
@@ -22,7 +27,7 @@ const blankMember = (): Omit<Member, "id"> => ({
   phone: "",
   tier: "Full",
   handicap: 18,
-  joinDate: new Date().toISOString().slice(0, 10),
+  joinDate: isoDate(new Date()),
   active: true,
   balance: 0,
   status: "Active",
@@ -260,9 +265,11 @@ export function Members() {
             >
               Run dunning
             </button>
-            <button className="btn" onClick={startCreate}>
-              + Add Member
-            </button>
+            <RequirePermission permission={MEMBERS_WRITE}>
+              <button className="btn" onClick={startCreate}>
+                + Add Member
+              </button>
+            </RequirePermission>
           </div>
         ) : (
           <button
@@ -422,27 +429,31 @@ export function Members() {
                       </td>
                       <td>
                         <div className="table-actions">
-                          {m.status === "Suspended" ? (
+                          <RequirePermission permission={MEMBERS_SUSPEND}>
+                            {m.status === "Suspended" ? (
+                              <button
+                                className="btn sm secondary"
+                                onClick={() => reinstate(m)}
+                              >
+                                Reinstate
+                              </button>
+                            ) : m.status === "Active" ? (
+                              <button
+                                className="btn sm secondary"
+                                onClick={() => suspend(m)}
+                              >
+                                Suspend
+                              </button>
+                            ) : null}
+                          </RequirePermission>
+                          <RequirePermission permission={MEMBERS_WRITE}>
                             <button
                               className="btn sm secondary"
-                              onClick={() => reinstate(m)}
+                              onClick={() => startEdit(m)}
                             >
-                              Reinstate
+                              Edit
                             </button>
-                          ) : m.status === "Active" ? (
-                            <button
-                              className="btn sm secondary"
-                              onClick={() => suspend(m)}
-                            >
-                              Suspend
-                            </button>
-                          ) : null}
-                          <button
-                            className="btn sm secondary"
-                            onClick={() => startEdit(m)}
-                          >
-                            Edit
-                          </button>
+                          </RequirePermission>
                         </div>
                       </td>
                     </tr>

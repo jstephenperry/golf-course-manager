@@ -1,4 +1,11 @@
 import { useMemo, useState } from "react";
+import {
+  SHIFTS_WRITE,
+  STAFF_WRITE,
+  TEMPLATES_WRITE,
+} from "../auth/permissions";
+import { RequirePermission } from "../auth/RequirePermission";
+import { useAuth } from "../auth/AuthContext";
 import { Modal } from "../components/Modal";
 import { useToaster } from "../components/Toaster";
 import { useStore } from "../data/store";
@@ -71,6 +78,11 @@ export function Staff() {
     weeklyTemplates: tplApi,
   } = useStore();
   const toaster = useToaster();
+  const { hasPermission } = useAuth();
+  // Used to gate inline shift-grid affordances (cell "+"; click-to-edit
+  // pills) where wrapping every element in <RequirePermission> would
+  // bloat the JSX.
+  const canWriteShifts = hasPermission(SHIFTS_WRITE);
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<Tab>("weekly");
   const [weekAnchor, setWeekAnchor] = useState(
@@ -301,26 +313,30 @@ export function Staff() {
           ))}
         </div>
         {tab === "roster" && (
-          <button
-            className="btn"
-            onClick={() => {
-              setStaffForm(blankStaff());
-              setStaffCreating(true);
-            }}
-          >
-            + Add Staff
-          </button>
+          <RequirePermission permission={STAFF_WRITE}>
+            <button
+              className="btn"
+              onClick={() => {
+                setStaffForm(blankStaff());
+                setStaffCreating(true);
+              }}
+            >
+              + Add Staff
+            </button>
+          </RequirePermission>
         )}
         {tab === "templates" && (
-          <button
-            className="btn"
-            onClick={() => {
-              setTplForm(blankTemplate(data.staff[0]?.id ?? ""));
-              setTplCreating(true);
-            }}
-          >
-            + New Template
-          </button>
+          <RequirePermission permission={TEMPLATES_WRITE}>
+            <button
+              className="btn"
+              onClick={() => {
+                setTplForm(blankTemplate(data.staff[0]?.id ?? ""));
+                setTplCreating(true);
+              }}
+            >
+              + New Template
+            </button>
+          </RequirePermission>
         )}
       </div>
 
@@ -366,15 +382,17 @@ export function Staff() {
                     </td>
                     <td>
                       <div className="table-actions">
-                        <button
-                          className="btn sm secondary"
-                          onClick={() => {
-                            setStaffEditing(s);
-                            setStaffForm({ ...s });
-                          }}
-                        >
-                          Edit
-                        </button>
+                        <RequirePermission permission={STAFF_WRITE}>
+                          <button
+                            className="btn sm secondary"
+                            onClick={() => {
+                              setStaffEditing(s);
+                              setStaffForm({ ...s });
+                            }}
+                          >
+                            Edit
+                          </button>
+                        </RequirePermission>
                       </div>
                     </td>
                   </tr>
@@ -390,15 +408,17 @@ export function Staff() {
         <div className="card">
           <div className="toolbar">
             {weekToolbar}
-            <div className="row">
-              <button
-                className="btn secondary"
-                onClick={applyTemplatesToWeek}
-                title="Materialize weekly templates into shifts for this week"
-              >
-                Apply templates to week
-              </button>
-            </div>
+            <RequirePermission permission={SHIFTS_WRITE}>
+              <div className="row">
+                <button
+                  className="btn secondary"
+                  onClick={applyTemplatesToWeek}
+                  title="Materialize weekly templates into shifts for this week"
+                >
+                  Apply templates to week
+                </button>
+              </div>
+            </RequirePermission>
           </div>
           {data.staff.length === 0 ? (
             <div className="empty">
@@ -450,6 +470,7 @@ export function Staff() {
                               key={d}
                               className="week-cell"
                               onClick={(e) => {
+                                if (!canWriteShifts) return;
                                 if (
                                   (e.target as HTMLElement).closest(
                                     ".shift-pill",
@@ -458,24 +479,41 @@ export function Staff() {
                                   return;
                                 openCreateShift(d, s.id);
                               }}
+                              style={
+                                canWriteShifts ? undefined : { cursor: "default" }
+                              }
                             >
                               {cellShifts.length === 0 ? (
-                                <span className="cell-add">+</span>
+                                canWriteShifts ? (
+                                  <span className="cell-add">+</span>
+                                ) : (
+                                  <span className="muted">—</span>
+                                )
                               ) : (
                                 <div className="cell-shifts">
-                                  {cellShifts.map((sh) => (
-                                    <button
-                                      key={sh.id}
-                                      className="shift-pill"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        openEditShift(sh);
-                                      }}
-                                      title={sh.notes || ""}
-                                    >
-                                      {sh.start}–{sh.end}
-                                    </button>
-                                  ))}
+                                  {cellShifts.map((sh) =>
+                                    canWriteShifts ? (
+                                      <button
+                                        key={sh.id}
+                                        className="shift-pill"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          openEditShift(sh);
+                                        }}
+                                        title={sh.notes || ""}
+                                      >
+                                        {sh.start}–{sh.end}
+                                      </button>
+                                    ) : (
+                                      <span
+                                        key={sh.id}
+                                        className="shift-pill"
+                                        title={sh.notes || ""}
+                                      >
+                                        {sh.start}–{sh.end}
+                                      </span>
+                                    ),
+                                  )}
                                 </div>
                               )}
                             </td>
@@ -631,19 +669,29 @@ export function Staff() {
                       </div>
                     ) : (
                       <div className="chip-list">
-                        {tpls.map((t) => (
-                          <button
-                            key={t.id}
-                            className="shift-pill"
-                            onClick={() => {
-                              setTplEditing(t);
-                              setTplForm({ ...t });
-                            }}
-                            title={t.notes || ""}
-                          >
-                            {DAY_LABELS[t.dayOfWeek]} {t.start}–{t.end}
-                          </button>
-                        ))}
+                        {tpls.map((t) =>
+                          hasPermission(TEMPLATES_WRITE) ? (
+                            <button
+                              key={t.id}
+                              className="shift-pill"
+                              onClick={() => {
+                                setTplEditing(t);
+                                setTplForm({ ...t });
+                              }}
+                              title={t.notes || ""}
+                            >
+                              {DAY_LABELS[t.dayOfWeek]} {t.start}–{t.end}
+                            </button>
+                          ) : (
+                            <span
+                              key={t.id}
+                              className="shift-pill"
+                              title={t.notes || ""}
+                            >
+                              {DAY_LABELS[t.dayOfWeek]} {t.start}–{t.end}
+                            </span>
+                          ),
+                        )}
                       </div>
                     )}
                   </div>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Modal } from "../components/Modal";
 import { NineEditor } from "../components/NineEditor";
 import { useToaster } from "../components/Toaster";
@@ -7,6 +8,7 @@ import {
   coursePar,
   courseTeeNames,
   courseYardage,
+  isPlayable,
 } from "../data/courseDerived";
 import { useStore } from "../data/store";
 import type { Course, Nine } from "../data/types";
@@ -224,6 +226,14 @@ function CoursesTab() {
                   <option>Cart Path Only</option>
                   <option>Closed</option>
                 </select>
+                {isPlayable(c) && (
+                  <Link
+                    to={`/courses/${c.id}/scorecard`}
+                    className="btn sm secondary"
+                  >
+                    Scorecard
+                  </Link>
+                )}
                 <button
                   className="btn sm secondary"
                   onClick={() => startEdit(c)}

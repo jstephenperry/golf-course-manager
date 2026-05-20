@@ -34,6 +34,61 @@ export class ApiError extends Error {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Auth integration
+//
+// The AuthProvider injects the current access token + a silent-renew
+// callback via `setAuth(...)`. Doing it through setters (instead of
+// importing the auth context here) keeps `client.ts` free of React deps
+// and avoids a circular import — the auth module depends on this module
+// for the typed `api`, so this module can't depend on the auth module.
+// ---------------------------------------------------------------------------
+
+/** Returns the current access token, or null if the user isn't signed in. */
+export type TokenProvider = () => string | null;
+
+/**
+ * Requests a fresh access token (silent renew). Returns the new token, or
+ * null if renewal failed — caller should let the 401 propagate.
+ */
+export type TokenRenewer = () => Promise<string | null>;
+
+let tokenProvider: TokenProvider | null = null;
+let tokenRenewer: TokenRenewer | null = null;
+
+/**
+ * Wire the api module to an auth source. Called once by `AuthProvider` on
+ * mount. Passing nulls clears the wiring (useful for tests).
+ */
+export function setAuth(
+  provider: TokenProvider | null,
+  renewer: TokenRenewer | null,
+): void {
+  tokenProvider = provider;
+  tokenRenewer = renewer;
+}
+
+async function doFetch(
+  method: string,
+  url: string,
+  body: unknown,
+  init: RequestInit | undefined,
+  token: string | null,
+): Promise<Response> {
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...((init?.headers as Record<string, string>) ?? {}),
+  };
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return fetch(url, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+    ...init,
+  });
+}
+
 async function request<T>(
   method: string,
   path: string,
@@ -41,19 +96,9 @@ async function request<T>(
   init?: RequestInit,
 ): Promise<T> {
   const url = `${API_BASE}${path}`;
-  const headers: Record<string, string> = {
-    Accept: "application/json",
-    ...((init?.headers as Record<string, string>) ?? {}),
-  };
-  if (body !== undefined) headers["Content-Type"] = "application/json";
   let res: Response;
   try {
-    res = await fetch(url, {
-      method,
-      headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
-      ...init,
-    });
+    res = await doFetch(method, url, body, init, tokenProvider?.() ?? null);
   } catch (err) {
     throw new ApiError(
       err instanceof Error ? err.message : "network error",
@@ -61,6 +106,31 @@ async function request<T>(
       null,
     );
   }
+
+  // On 401, try a silent renew once and retry the request with the fresh
+  // token. If it still 401s (or renewal fails), let the error propagate —
+  // the consumer (ProtectedRoute / login page in a later slice) is
+  // responsible for redirecting to interactive login.
+  if (res.status === 401 && tokenRenewer) {
+    let renewed: string | null = null;
+    try {
+      renewed = await tokenRenewer();
+    } catch {
+      renewed = null;
+    }
+    if (renewed) {
+      try {
+        res = await doFetch(method, url, body, init, renewed);
+      } catch (err) {
+        throw new ApiError(
+          err instanceof Error ? err.message : "network error",
+          0,
+          null,
+        );
+      }
+    }
+  }
+
   if (res.status === 204) return undefined as T;
   const contentType = res.headers.get("content-type") ?? "";
   const payload = contentType.includes("application/json")

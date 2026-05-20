@@ -317,6 +317,87 @@ textarea {
   background: rgba(255, 255, 255, 0.06);
 }
 
+/* --- Current user block (sidebar footer) --- */
+.current-user {
+  padding: 8px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.current-user-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #e9efe6;
+}
+.current-user-role {
+  font-size: 11px;
+  color: #b9c9bf;
+  margin-top: 2px;
+  word-break: break-word;
+}
+
+/* --- Login page --- */
+.login-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #0f3d24 0%, #0a2a18 100%);
+  padding: 24px;
+}
+.login-card {
+  background: var(--surface);
+  border-radius: 14px;
+  box-shadow: 0 18px 48px rgba(15, 35, 25, 0.28);
+  width: 100%;
+  max-width: 380px;
+  padding: 28px;
+  text-align: center;
+}
+.login-card .brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.login-card .brand-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: grid;
+  place-items: center;
+  color: #0a2a18;
+  font-weight: 700;
+  font-size: 20px;
+}
+.login-card .brand-name {
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.3px;
+}
+.login-card .brand-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.login-card .btn {
+  width: 100%;
+  justify-content: center;
+  padding: 11px 14px;
+  font-size: 14px;
+}
+.login-card .login-error {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fbe2e6;
+  color: #862337;
+  border: 1px solid #f0c2cb;
+  font-size: 12.5px;
+  text-align: left;
+}
+
 .main {
   display: flex;
   flex-direction: column;
@@ -806,4 +887,287 @@ textarea {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+/* --- Tab nav (used on Tee Times to switch active course) --- */
+.tab-nav {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.tab-nav .tab {
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: -1px;
+  transition: background 120ms ease, color 120ms ease;
+}
+.tab-nav .tab:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.tab-nav .tab.active {
+  background: var(--surface);
+  border-color: var(--border);
+  border-bottom-color: var(--surface);
+  color: var(--text);
+}
+.tab-nav .tab-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.tab-nav .tab.active .tab-count {
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+
+/* --- Cross-course overlap rendered "underneath" the active row --- */
+.overlap-block {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.overlap-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--surface-2);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  opacity: 0.7;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+.overlap-row:hover {
+  opacity: 1;
+  border-style: solid;
+}
+.overlap-row.conflict {
+  opacity: 1;
+  border-color: var(--danger);
+  background: #fbe9ec;
+  color: #6a1b29;
+}
+.overlap-course {
+  font-weight: 600;
+  color: var(--text);
+}
+.overlap-row.conflict .overlap-course {
+  color: #6a1b29;
+}
+.overlap-players {
+  font-style: italic;
+}
+.overlap-status {
+  margin-left: auto;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.pill.sm {
+  padding: 1px 6px;
+  font-size: 10px;
+}
+
+/* --- Scorecard --- */
+.scorecard-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.scorecard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+}
+.scorecard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  border-bottom: 2px solid var(--primary-dark);
+  padding-bottom: 6px;
+  margin-bottom: 10px;
+}
+.scorecard-header h1 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--primary-dark);
+}
+.scorecard-header-meta {
+  display: flex;
+  gap: 14px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.scorecard-header-meta strong {
+  color: var(--text);
+}
+.scorecard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  table-layout: fixed;
+}
+.scorecard-table th,
+.scorecard-table td {
+  border: 1px solid var(--border);
+  padding: 3px 4px;
+  text-align: center;
+}
+.scorecard-table .row-label {
+  width: 110px;
+  text-align: left;
+  padding-left: 6px;
+}
+.scorecard-table thead th {
+  background: var(--surface-2);
+  font-weight: 700;
+}
+.scorecard-table .col-total {
+  background: var(--surface-2);
+  font-weight: 600;
+}
+.scorecard-table .row-par {
+  background: var(--primary-soft);
+  font-weight: 600;
+}
+.scorecard-table .row-hcp {
+  background: var(--surface-2);
+  font-style: italic;
+  color: var(--text-muted);
+}
+.scorecard-table .row-tee th.row-label {
+  font-weight: 600;
+}
+.scorecard-table .row-player th.row-label {
+  font-weight: 500;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.scorecard-table .score-cell {
+  height: 22px;
+  background: #fffbe9;
+}
+.scorecard-table .total-cell {
+  background: #f4ecd0;
+}
+.scorecard-footer {
+  margin-top: 6px;
+  font-size: 10px;
+}
+
+/* On-screen separator between the two sections so the user can scan both
+   without confusion. Hidden in print. */
+.scorecard-section + .scorecard-section {
+  margin-top: 24px;
+  border-top: 1px dashed var(--border);
+  padding-top: 16px;
+}
+
+@media print {
+  /* Hide everything except the scorecard. Collapse the app shell so the
+     card sits at the top of the page with no surrounding chrome. The
+     actual @page size is injected per render by the Scorecard component
+     so it can vary with the user's paper-size choice. */
+  body { background: #fff; }
+
+  /* Section visibility — print just what the user picked. */
+  .scorecard[data-print-mode="score"] .section-yardages { display: none !important; }
+  .scorecard[data-print-mode="yardages"] .section-score { display: none !important; }
+  /* "Both" mode prints both, on separate pages. */
+  .scorecard[data-print-mode="both"] .section-yardages {
+    page-break-before: always;
+    break-before: page;
+  }
+  /* On-screen divider is meaningless in print. */
+  .scorecard-section + .scorecard-section {
+    margin-top: 0;
+    border-top: none;
+    padding-top: 0;
+  }
+  .sidebar,
+  .topbar,
+  .scorecard-controls,
+  .banner,
+  .toast-viewport {
+    display: none !important;
+  }
+  .app-shell { display: block; }
+  .main { display: block; }
+  .content { padding: 0; }
+  .scorecard {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+  }
+  .scorecard-header {
+    border-bottom-color: #000;
+    padding-bottom: 3px;
+    margin-bottom: 4px;
+  }
+  .scorecard-table .score-cell { background: #fff; }
+  .scorecard-table .total-cell { background: #fff; }
+
+  /* ----- A6 landscape (148 × 105 mm). The smallest target. ----- */
+  /* 148mm wide minus 8mm margins = 140mm of usable width — about
+     6.4mm per column with 22 columns (incl. row label). 7pt type is
+     readable at handheld distance; tighter padding keeps the four
+     player-score rows accommodating without overflowing height. */
+  .scorecard[data-paper-size="a6"] .scorecard-header h1 { font-size: 11px; }
+  .scorecard[data-paper-size="a6"] .scorecard-header { padding-bottom: 2px; margin-bottom: 3px; }
+  .scorecard[data-paper-size="a6"] .scorecard-header-meta { font-size: 8px; gap: 8px; }
+  .scorecard[data-paper-size="a6"] .scorecard-table { font-size: 7px; }
+  .scorecard[data-paper-size="a6"] .scorecard-table th,
+  .scorecard[data-paper-size="a6"] .scorecard-table td { padding: 0.5px 1.5px; }
+  .scorecard[data-paper-size="a6"] .scorecard-table .row-label { width: 60px; }
+  .scorecard[data-paper-size="a6"] .scorecard-table .score-cell { height: 11px; }
+  .scorecard[data-paper-size="a6"] .scorecard-footer { font-size: 6px; margin-top: 3px; }
+
+  /* ----- A5 landscape (210 × 148 mm). Comfortable. ----- */
+  .scorecard[data-paper-size="a5"] .scorecard-header h1 { font-size: 14px; }
+  .scorecard[data-paper-size="a5"] .scorecard-header-meta { font-size: 10px; }
+  .scorecard[data-paper-size="a5"] .scorecard-table { font-size: 9px; }
+  .scorecard[data-paper-size="a5"] .scorecard-table th,
+  .scorecard[data-paper-size="a5"] .scorecard-table td { padding: 1.5px 2.5px; }
+  .scorecard[data-paper-size="a5"] .scorecard-table .row-label { width: 90px; }
+  .scorecard[data-paper-size="a5"] .scorecard-table .score-cell { height: 15px; }
+  .scorecard[data-paper-size="a5"] .scorecard-footer { font-size: 9px; }
+
+  /* ----- US Letter landscape. Lots of room — keep readable. ----- */
+  .scorecard[data-paper-size="letter"] .scorecard-header h1 { font-size: 18px; }
+  .scorecard[data-paper-size="letter"] .scorecard-header-meta { font-size: 12px; }
+  .scorecard[data-paper-size="letter"] .scorecard-table { font-size: 11px; }
+  .scorecard[data-paper-size="letter"] .scorecard-table th,
+  .scorecard[data-paper-size="letter"] .scorecard-table td { padding: 3px 5px; }
+  .scorecard[data-paper-size="letter"] .scorecard-table .row-label { width: 130px; }
+  .scorecard[data-paper-size="letter"] .scorecard-table .score-cell { height: 22px; }
+  .scorecard[data-paper-size="letter"] .scorecard-footer { font-size: 10px; }
 }

@@ -1,8 +1,12 @@
 import { Link } from "react-router-dom";
 import { useStore } from "../data/store";
-import { formatMoney, tabTotals } from "../data/utils";
+import { formatMoney, isoDate, tabTotals } from "../data/utils";
 
-const todayIso = () => new Date().toISOString().slice(0, 10);
+// Local-time date — `toISOString().slice(0,10)` would use UTC, which
+// flips to tomorrow late in the evening in negative-offset timezones
+// and produced the "today's tee sheet is empty / showing tomorrow's
+// rounds" bug.
+const todayIso = () => isoDate(new Date());
 
 export function Dashboard() {
   const { data } = useStore();

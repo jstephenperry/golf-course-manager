@@ -1,3 +1,4 @@
+using FairwayHq.Api.Authorization;
 using FairwayHq.Api.Data;
 using FairwayHq.Api.Models;
 using Microsoft.EntityFrameworkCore;
@@ -17,26 +18,33 @@ public static class MemberOverviewEndpoints
                     .FirstOrDefaultAsync(m => m.Id == id);
                 if (member is null) return Results.NotFound();
 
-                // Load all tee times and filter in-memory. PlayersJson is a
-                // serialized string[] column with no index; a LIKE filter
-                // would be fragile (substring false positives) and isn't
-                // truly indexable. At expected scale (~30k rounds/year for
-                // a single course) the in-memory scan is fine; the move
+                // Load all tee times for this member once, then partition.
+                // PlayersJson is a serialized string[] with no index; a LIKE
+                // filter would be fragile (substring false positives) and
+                // isn't truly indexable. At expected scale (~30k rounds/year
+                // for a single course) the in-memory scan is fine; the move
                 // when this hurts is a normalized TeeTimePlayer join table.
-                var completed = (await db.TeeTimes.AsNoTracking().ToListAsync())
+                var memberTeeTimes = (await db.TeeTimes.AsNoTracking().ToListAsync())
                     .Select(t => t.ToDto())
-                    .Where(t => t.Status == "Completed" && t.Players.Contains(id))
+                    .Where(t => t.Players.Contains(id))
+                    .ToList();
+
+                var completed = memberTeeTimes
+                    .Where(t => t.Status == "Completed")
                     .OrderByDescending(t => t.Date)
                     .ThenByDescending(t => t.Time)
                     .ToList();
+
+                var noShowCount = memberTeeTimes.Count(t => t.Status == "No Show");
 
                 return Results.Ok(new MemberOverviewDto(
                     Member: member.ToDto(),
                     LastPlayedDate: completed.FirstOrDefault()?.Date,
                     LifetimeRounds: completed.Count,
+                    NoShowCount: noShowCount,
                     RecentRounds: completed.Take(RecentRoundsLimit).ToList()
                 ));
             }
-        ).WithTags("Members");
+        ).WithTags("Members").RequireAuthorization(Policy.For(Permissions.MembersOverviewRead));
     }
 }

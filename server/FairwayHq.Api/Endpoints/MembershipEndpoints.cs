@@ -1,3 +1,4 @@
+using FairwayHq.Api.Authorization;
 using FairwayHq.Api.Data;
 using FairwayHq.Api.Models;
 using FairwayHq.Api.Services;
@@ -18,7 +19,8 @@ public static class MembershipEndpoints
         apps.MapGet("/", async (AppDbContext db) =>
             (await db.MemberApplications.AsNoTracking().ToListAsync())
                 .OrderByDescending(a => a.SubmittedAt)
-                .Select(a => a.ToDto()));
+                .Select(a => a.ToDto()))
+            .RequireAuthorization(Policy.For(Permissions.MembersApplicationsRead));
 
         apps.MapPost("/", async (MemberApplicationDto dto, AppDbContext db) =>
         {
@@ -44,7 +46,7 @@ public static class MembershipEndpoints
             db.MemberApplications.Add(entity);
             await db.SaveChangesAsync();
             return Results.Created($"/api/applications/{entity.Id}", entity.ToDto());
-        });
+        }).RequireAuthorization(Policy.For(Permissions.MembersApplicationsWrite));
 
         apps.MapPut("/{id}", async (string id, MemberApplicationDto dto, AppDbContext db) =>
         {
@@ -55,7 +57,7 @@ public static class MembershipEndpoints
             entity.Apply(dto);
             await db.SaveChangesAsync();
             return Results.Ok(entity.ToDto());
-        });
+        }).RequireAuthorization(Policy.For(Permissions.MembersApplicationsWrite));
 
         apps.MapPost("/{id}/approve", async (string id, [FromBody] ApplicationReviewDto body, AppDbContext db) =>
         {
@@ -70,7 +72,7 @@ public static class MembershipEndpoints
             entity.ReviewNote = body?.Note;
             await db.SaveChangesAsync();
             return Results.Ok(entity.ToDto());
-        });
+        }).RequireAuthorization(Policy.For(Permissions.MembersApplicationsWrite));
 
         apps.MapPost("/{id}/reject", async (string id, [FromBody] ApplicationReviewDto body, AppDbContext db) =>
         {
@@ -85,7 +87,7 @@ public static class MembershipEndpoints
             entity.ReviewNote = body?.Note;
             await db.SaveChangesAsync();
             return Results.Ok(entity.ToDto());
-        });
+        }).RequireAuthorization(Policy.For(Permissions.MembersApplicationsWrite));
 
         apps.MapPost("/{id}/activate", async (string id, AppDbContext db) =>
         {
@@ -139,7 +141,7 @@ public static class MembershipEndpoints
                 application = entity.ToDto(),
                 member = member.ToDto(),
             });
-        });
+        }).RequireAuthorization(Policy.For(Permissions.MembersApplicationsWrite));
 
         apps.MapPost("/{id}/withdraw", async (string id, AppDbContext db) =>
         {
@@ -151,7 +153,7 @@ public static class MembershipEndpoints
             entity.ReviewedAt ??= DateTime.UtcNow.ToString("o");
             await db.SaveChangesAsync();
             return Results.Ok(entity.ToDto());
-        });
+        }).RequireAuthorization(Policy.For(Permissions.MembersApplicationsWrite));
 
         apps.MapDelete("/{id}", async (string id, AppDbContext db) =>
         {
@@ -160,7 +162,7 @@ public static class MembershipEndpoints
             db.MemberApplications.Remove(entity);
             await db.SaveChangesAsync();
             return Results.NoContent();
-        });
+        }).RequireAuthorization(Policy.For(Permissions.MembersApplicationsWrite));
 
         // -------- Member account actions (suspend / reinstate) --------
         var members = app.MapGroup("/api/members").WithTags("Members");
@@ -174,7 +176,7 @@ public static class MembershipEndpoints
             m.SuspendedAt = DateTime.UtcNow.ToString("o");
             await db.SaveChangesAsync();
             return Results.Ok(m.ToDto());
-        });
+        }).RequireAuthorization(Policy.For(Permissions.MembersSuspend));
 
         members.MapPost("/{id}/reinstate", async (string id, AppDbContext db) =>
         {
@@ -189,13 +191,13 @@ public static class MembershipEndpoints
             }
             await db.SaveChangesAsync();
             return Results.Ok(m.ToDto());
-        });
+        }).RequireAuthorization(Policy.For(Permissions.MembersSuspend));
 
         // -------- Dunning trigger --------
         app.MapPost("/api/dunning/run", async (DunningService svc, CancellationToken ct) =>
         {
             var result = await svc.RunOnceAsync(ct);
             return Results.Ok(result);
-        }).WithTags("Dunning");
+        }).WithTags("Dunning").RequireAuthorization(Policy.For(Permissions.DunningRun));
     }
 }

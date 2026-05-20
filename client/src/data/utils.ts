@@ -167,9 +167,22 @@ export function tabTotals(tab: PlayerTab): TabTotals {
   };
 }
 
+// Cached formatters — Intl.NumberFormat constructor is non-trivial; reuse
+// them across every render rather than building one per call.
+const MONEY_FMT = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
+const COUNT_FMT = new Intl.NumberFormat("en-US");
+
 export function formatMoney(amount: number): string {
-  const sign = amount < 0 ? "-" : "";
-  return `${sign}$${Math.abs(amount).toFixed(2)}`;
+  return MONEY_FMT.format(amount);
+}
+
+// Integer-style display for inventory counts, lifetime totals, etc.
+// Adds thousands separators; doesn't touch the sign or units.
+export function formatCount(n: number): string {
+  return COUNT_FMT.format(n);
 }
 
 export function formatDateTime(iso: string): string {

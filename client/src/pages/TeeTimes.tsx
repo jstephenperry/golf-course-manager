@@ -77,6 +77,31 @@ export function TeeTimes() {
     return map;
   }, [data.teeTimes, date, courseId]);
 
+  // Same date, other courses, not Cancelled — grouped by time so each slot
+  // row can render the cross-course "underneath" picture in one lookup.
+  // Cancelled bookings aren't surfaced (already-released slot, no conflict
+  // value); Completed / No Show stay visible because staff still want
+  // historical context when reviewing today's sheet.
+  const overlapsByTime = useMemo(() => {
+    const map = new Map<string, TeeTime[]>();
+    data.teeTimes
+      .filter(
+        (t) =>
+          t.date === date &&
+          t.courseId !== courseId &&
+          t.status !== "Cancelled",
+      )
+      .forEach((t) => {
+        const bucket = map.get(t.time);
+        if (bucket) bucket.push(t);
+        else map.set(t.time, [t]);
+      });
+    return map;
+  }, [data.teeTimes, date, courseId]);
+
+  const courseName = (id: string) =>
+    data.courses.find((c) => c.id === id)?.name ?? "Course";
+
   const offGridBookings = useMemo(
     () =>
       data.teeTimes
@@ -171,7 +196,9 @@ export function TeeTimes() {
             ? "gray"
             : t.status === "Cancelled"
               ? "red"
-              : "gold"
+              : t.status === "No Show"
+                ? "red"
+                : "gold"
       }`}
     >
       {t.status}
@@ -205,20 +232,6 @@ export function TeeTimes() {
                 onChange={(e) => setDate(e.target.value)}
               />
             </div>
-            <div className="field">
-              <label>Course</label>
-              <select
-                className="select"
-                value={courseId}
-                onChange={(e) => setCourseId(e.target.value)}
-              >
-                {playableCourses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
             {course && (
               <div className="muted" style={{ fontSize: 12 }}>
                 {courseOpen(course)} – {courseClose(course)} ·{" "}
@@ -231,6 +244,35 @@ export function TeeTimes() {
             <span className="pill">{openCount} open</span>
           </div>
         </div>
+
+        <nav
+          className="tab-nav"
+          role="tablist"
+          aria-label="Course"
+          style={{ marginBottom: 12 }}
+        >
+          {playableCourses.map((c) => {
+            const courseBookings = data.teeTimes.filter(
+              (t) =>
+                t.courseId === c.id &&
+                t.date === date &&
+                t.status !== "Cancelled",
+            ).length;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                role="tab"
+                aria-selected={c.id === courseId}
+                className={`tab${c.id === courseId ? " active" : ""}`}
+                onClick={() => setCourseId(c.id)}
+              >
+                <span>{c.name}</span>
+                <span className="tab-count">{courseBookings}</span>
+              </button>
+            );
+          })}
+        </nav>
 
         {slots.length === 0 ? (
           <div className="empty">
@@ -250,13 +292,62 @@ export function TeeTimes() {
             <tbody>
               {slots.map((time) => {
                 const t = byTime.get(time);
+                const overlaps = overlapsByTime.get(time) ?? [];
+                const overlapBlock =
+                  overlaps.length === 0 ? null : (
+                    <div className="overlap-block">
+                      {overlaps.map((o) => {
+                        const sharedPlayers = t
+                          ? o.players.filter((p) => t.players.includes(p))
+                          : [];
+                        const isConflict = sharedPlayers.length > 0;
+                        return (
+                          <button
+                            key={o.id}
+                            type="button"
+                            className={`overlap-row${
+                              isConflict ? " conflict" : ""
+                            }`}
+                            onClick={() => setCourseId(o.courseId)}
+                            title={
+                              isConflict
+                                ? `Double-booked: ${sharedPlayers
+                                    .map(memberName)
+                                    .join(", ")}`
+                                : `Switch to ${courseName(o.courseId)}`
+                            }
+                          >
+                            <span className="overlap-course">
+                              ↳ {courseName(o.courseId)}
+                            </span>
+                            {o.players.length === 0 ? (
+                              <span className="muted" style={{ fontSize: 12 }}>
+                                (unassigned)
+                              </span>
+                            ) : (
+                              <span className="overlap-players">
+                                {o.players.map(memberName).join(", ")}
+                              </span>
+                            )}
+                            <span className="overlap-status">{o.status}</span>
+                            {isConflict && (
+                              <span className="pill red sm">conflict</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
                 if (!t) {
                   return (
                     <tr key={time}>
                       <td>
                         <strong>{time}</strong>
                       </td>
-                      <td className="muted">Open</td>
+                      <td className="muted">
+                        Open
+                        {overlapBlock}
+                      </td>
                       <td></td>
                       <td></td>
                       <td>
@@ -294,6 +385,7 @@ export function TeeTimes() {
                           {t.notes}
                         </div>
                       )}
+                      {overlapBlock}
                     </td>
                     <td>{statusPill(t)}</td>
                     <td>
@@ -309,6 +401,15 @@ export function TeeTimes() {
                             onClick={() => setStatus(t.id, "Checked In")}
                           >
                             Check In
+                          </button>
+                        )}
+                        {t.status === "Booked" && (
+                          <button
+                            className="btn sm secondary"
+                            onClick={() => setStatus(t.id, "No Show")}
+                            title="Player did not arrive"
+                          >
+                            No Show
                           </button>
                         )}
                         {t.status === "Checked In" && (
@@ -517,6 +618,7 @@ export function TeeTimes() {
                 <option>Checked In</option>
                 <option>Completed</option>
                 <option>Cancelled</option>
+                <option>No Show</option>
               </select>
             </div>
           </div>

@@ -1,0 +1,59 @@
+# Production compose for a single-Pi self-hosted course deployment.
+# Drop this file (and Caddyfile) on the Pi at /opt/fairway-hq/ and run:
+#
+#   sudo podman compose -f /opt/fairway-hq/compose.yaml up -d
+#
+# Caddy terminates TLS and is the only thing exposed to the LAN. The
+# fairway-hq container is reachable only on the internal compose
+# network. The `io.containers.autoupdate=registry` label tells the
+# system-wide podman-auto-update.timer to pull a new image from ghcr.io
+# and restart this service when one is published (see setup-pi.md).
+
+services:
+  caddy:
+    image: docker.io/library/caddy:2-alpine
+    container_name: fairway-caddy
+    restart: always
+    ports:
+      - "443:443"        # primary TLS port for the LAN
+      - "80:80"          # ACME challenge + HTTP→HTTPS redirect (mode 2)
+      - "8443:8443"      # internal-CA mode (mode 1) — see Caddyfile
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:Z,ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - fairway-hq
+    labels:
+      io.containers.autoupdate: registry
+
+  fairway-hq:
+    image: ghcr.io/jstephenperry/golf-course-manager:latest
+    container_name: fairway-hq
+    restart: always
+    # No host port exposure. Caddy is the only ingress; the API is
+    # reachable from Caddy on the compose network via its service name.
+    expose:
+      - "8080"
+    volumes:
+      - fairway-data:/app/data
+    environment:
+      # Override per course. Container defaults to UTC, which skews
+      # "today's tee sheet" calculations server-side. Use the course's
+      # IANA zone (America/Chicago, America/Denver, America/Los_Angeles,
+      # America/New_York, etc.).
+      TZ: America/Chicago
+      # OIDC validation. Leave these unset until you've stood up an IdP
+      # and configured Caddy's /auth/* route. Once set, the API
+      # enforces tokens signed by this issuer.
+      # Authentication__Keycloak__Authority: "https://fairway.local:8443/auth/realms/fairway-hq"
+      # Authentication__Keycloak__Audience: "fairway-hq-spa"
+    labels:
+      io.containers.autoupdate: registry
+
+volumes:
+  # Named volume — Podman owns the perms so the in-container user can
+  # write the SQLite WAL without host-side chown gymnastics.
+  fairway-data:
+  caddy_data:
+  caddy_config:

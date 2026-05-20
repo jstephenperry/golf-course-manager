@@ -153,6 +153,116 @@ public class ImportTests : IClassFixture<ApiFactory>
         Assert.Empty(result.Errors);
     }
 
+    [Fact]
+    public async Task Import_tee_times_is_idempotent_via_natural_key_dedup()
+    {
+        // The user's pain: re-running the same payload (with empty ids)
+        // used to create duplicates because the server auto-generated a
+        // fresh id each time. Natural-key dedup on (date, time, courseId)
+        // makes the re-run a no-op.
+        var client = _factory.CreateClient();
+        var courseId = UniqueId("crs");
+        await client.PostAsJsonAsync("/api/import/courses", new[]
+        {
+            new CourseDto(courseId, "Idempotent Course", null, null, 0, 0, "Open", "06:00", "20:00", ""),
+        });
+
+        var payload = new[]
+        {
+            new TeeTimeDto("", "2026-06-01", "08:00", courseId, new List<string>(), false, "Booked", ""),
+            new TeeTimeDto("", "2026-06-01", "08:15", courseId, new List<string>(), false, "Booked", ""),
+        };
+
+        var first = await client.PostAsJsonAsync("/api/import/tee-times", payload);
+        var firstResult = await first.Content.ReadFromJsonAsync<ImportEndpoints.ImportResult>();
+        Assert.Equal(2, firstResult!.Created);
+        Assert.Equal(0, firstResult.Skipped);
+
+        // Re-run with the same payload.
+        var second = await client.PostAsJsonAsync("/api/import/tee-times", payload);
+        var secondResult = await second.Content.ReadFromJsonAsync<ImportEndpoints.ImportResult>();
+        Assert.Equal(0, secondResult!.Created);
+        Assert.Equal(2, secondResult.Skipped);
+        Assert.Equal(2, secondResult.Errors.Count);
+        Assert.All(secondResult.Errors, e =>
+            Assert.Equal("duplicate_natural_key", e.Error));
+    }
+
+    [Fact]
+    public async Task Import_members_dedups_by_email_case_insensitive()
+    {
+        var client = _factory.CreateClient();
+        var first = await client.PostAsJsonAsync("/api/import/members", new[]
+        {
+            NewMember(UniqueId("mbr"), "Casey", "Lin") with { Email = $"DuplicateEmail_{Guid.NewGuid():N}@x.example" },
+        });
+        var firstResult = await first.Content.ReadFromJsonAsync<ImportEndpoints.ImportResult>();
+        var createdId = firstResult!.Errors.Count == 0
+            ? null  // first import succeeded; we need to grab the email for the second
+            : firstResult.Errors[0].Detail;
+        Assert.Equal(1, firstResult.Created);
+
+        // Pull the email we just used (case-randomized for the second try).
+        var members = await client.GetFromJsonAsync<List<MemberDto>>("/api/members");
+        var seeded = members!.First(m => m.FirstName == "Casey");
+        var upperedEmail = seeded.Email.ToUpperInvariant();
+
+        var second = await client.PostAsJsonAsync("/api/import/members", new[]
+        {
+            NewMember(UniqueId("mbr"), "Different", "Person") with { Email = upperedEmail },
+        });
+        var secondResult = await second.Content.ReadFromJsonAsync<ImportEndpoints.ImportResult>();
+        Assert.Equal(0, secondResult!.Created);
+        Assert.Single(secondResult.Errors);
+        Assert.Equal("duplicate_natural_key", secondResult.Errors[0].Error);
+        Assert.Contains(seeded.Id, secondResult.Errors[0].Detail!);
+        // unused — silence the analyzer if any
+        _ = createdId;
+    }
+
+    [Fact]
+    public async Task Import_dedups_within_a_single_batch()
+    {
+        // Same SKU twice in one upload — second row should skip rather
+        // than create a phantom duplicate.
+        var client = _factory.CreateClient();
+        var sku = $"SKU-{Guid.NewGuid():N}".Substring(0, 18);
+        var res = await client.PostAsJsonAsync("/api/import/products", new[]
+        {
+            new ProductDto("", "Wedge A", "Clubs", sku, 199m, 110m, 5, 2),
+            new ProductDto("", "Wedge A (dup)", "Clubs", sku, 199m, 110m, 5, 2),
+        });
+        var result = await res.Content.ReadFromJsonAsync<ImportEndpoints.ImportResult>();
+        Assert.Equal(1, result!.Created);
+        Assert.Equal(1, result.Skipped);
+        Assert.Single(result.Errors);
+        Assert.Equal("duplicate_natural_key", result.Errors[0].Error);
+        Assert.Equal(1, result.Errors[0].Index);
+    }
+
+    [Fact]
+    public async Task Import_maintenance_accepts_rows_with_omitted_optional_fks()
+    {
+        // Regression: the import schema documents courseId and assignedTo
+        // as optional on maintenance, but the underlying TEXT columns are
+        // NOT NULL. Omitting the fields used to land a null at SaveChanges
+        // and surface as a 500. The endpoint coerces null → "" before
+        // Apply, so rows without those fields should create cleanly.
+        var client = _factory.CreateClient();
+        var id = UniqueId("mnt");
+        // Build the JSON payload directly so courseId / assignedTo are
+        // truly omitted (not present-but-null) — the failure mode the
+        // seed dataset hit.
+        var payload = $"[{{\"id\":\"{id}\",\"title\":\"Re-sod tee boxes\",\"category\":\"Tees\",\"dueDate\":\"2026-05-25\",\"priority\":\"High\",\"status\":\"Open\",\"notes\":\"\"}}]";
+        var res = await client.PostAsync(
+            "/api/import/maintenance",
+            new StringContent(payload, System.Text.Encoding.UTF8, "application/json"));
+        Assert.Equal(System.Net.HttpStatusCode.OK, res.StatusCode);
+        var result = await res.Content.ReadFromJsonAsync<ImportEndpoints.ImportResult>();
+        Assert.Equal(1, result!.Created);
+        Assert.Empty(result.Errors);
+    }
+
     private static MemberDto NewMember(string id, string first, string last) =>
         new(Id: id, FirstName: first, LastName: last,
             Email: $"{(string.IsNullOrEmpty(first) ? "blank" : first)}@example.com",

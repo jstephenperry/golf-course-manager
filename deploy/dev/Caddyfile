@@ -1,0 +1,38 @@
+# Dev reverse proxy for Fairway HQ. Single-origin layout, mirrors prod.
+#
+#   https://localhost:8443/         → fairway-hq container (API + SPA)
+#   https://localhost:8443/api/*    → fairway-hq container (same upstream)
+#   https://localhost:8443/auth/*   → fairway-keycloak container
+#
+# TLS: Caddy generates its own internal CA and signs a cert for
+# localhost. Install the CA into your browsers' trust stores once via
+# the script in deploy/dev/trust-caddy-ca.sh (see setup-dev.md).
+# Mirrors the production reverse-proxy + TLS termination layout.
+#
+# Caddy is on the compose network (no host networking) so it reaches
+# the other services by their compose service names.
+
+{
+	auto_https disable_redirects
+}
+
+localhost:8443, 127.0.0.1:8443 {
+	tls internal
+
+	# ----- Keycloak (containerized, KC_HTTP_RELATIVE_PATH=/auth) -----
+	handle /auth/* {
+		reverse_proxy fairway-keycloak:8080 {
+			header_up X-Forwarded-Proto https
+			header_up X-Forwarded-Host {host}
+		}
+	}
+
+	# ----- API + SPA (one upstream — the .NET API serves the SPA
+	#       bundle out of its wwwroot and the JSON API under /api/*) -----
+	handle {
+		reverse_proxy fairway-hq:8080 {
+			header_up X-Forwarded-Proto https
+			header_up X-Forwarded-Host {host}
+		}
+	}
+}

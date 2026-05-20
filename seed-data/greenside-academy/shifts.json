@@ -1,0 +1,19 @@
+[
+  { "id": "shft_today_calderon",  "staffId": "stf_dir_calderon",    "date": "2026-05-18", "start": "07:00", "end": "15:00", "notes": "Riley AM block; admin PM." },
+  { "id": "shft_today_levine",    "staffId": "stf_coach_levine",    "date": "2026-05-18", "start": "08:00", "end": "17:00", "notes": "Adult lessons 10-14." },
+  { "id": "shft_today_anand",     "staffId": "stf_jr_anand",        "date": "2026-05-18", "start": "09:00", "end": "18:00", "notes": "Junior program. Pair w/ Lena 09:30-10:00." },
+  { "id": "shft_today_fukuda",    "staffId": "stf_perf_fukuda",     "date": "2026-05-18", "start": "10:00", "end": "18:00", "notes": "Performance assessments + recovery clinic." },
+  { "id": "shft_today_roussos",   "staffId": "stf_fit_roussos",     "date": "2026-05-18", "start": "11:00", "end": "19:00", "notes": "Wedge fittings only." },
+  { "id": "shft_today_okonkwo",   "staffId": "stf_shop_okonkwo",    "date": "2026-05-18", "start": "07:00", "end": "16:00", "notes": "Open shop; cash drawer count." },
+  { "id": "shft_today_vega",      "staffId": "stf_grnk_vega",       "date": "2026-05-18", "start": "05:00", "end": "13:00", "notes": "Morning mow + bunker rake." },
+  { "id": "shft_today_halloran",  "staffId": "stf_caddie_halloran", "date": "2026-05-18", "start": "06:30", "end": "14:30", "notes": "Looper for Riley + Sasha rounds." },
+  { "id": "shft_today_park",      "staffId": "stf_asst_park",       "date": "2026-05-18", "start": "12:00", "end": "20:30", "notes": "PM coverage + close. Twilight starter." },
+
+  { "id": "shft_tom_calderon",    "staffId": "stf_dir_calderon",    "date": "2026-05-19", "start": "07:00", "end": "15:00", "notes": "Riley 07:00; coach development clinic 11:00." },
+  { "id": "shft_tom_levine",      "staffId": "stf_coach_levine",    "date": "2026-05-19", "start": "08:00", "end": "17:00", "notes": "Max 08:15 corporate. Adult intermediate 14:00." },
+  { "id": "shft_tom_anand",       "staffId": "stf_jr_anand",        "date": "2026-05-19", "start": "09:00", "end": "18:00", "notes": "" },
+  { "id": "shft_tom_fukuda",      "staffId": "stf_perf_fukuda",     "date": "2026-05-19", "start": "10:00", "end": "18:00", "notes": "" },
+  { "id": "shft_tom_okonkwo",     "staffId": "stf_shop_okonkwo",    "date": "2026-05-19", "start": "07:00", "end": "16:00", "notes": "" },
+  { "id": "shft_tom_vega",        "staffId": "stf_grnk_vega",       "date": "2026-05-19", "start": "05:00", "end": "13:00", "notes": "Top-dress Proving greens 4/6/8." },
+  { "id": "shft_tom_park",        "staffId": "stf_asst_park",       "date": "2026-05-19", "start": "12:00", "end": "20:30", "notes": "PM coverage + close." }
+]

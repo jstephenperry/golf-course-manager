@@ -48,6 +48,7 @@ public record MemberOverviewDto(
     MemberDto Member,
     string? LastPlayedDate,
     int LifetimeRounds,
+    int NoShowCount,
     List<TeeTimeDto> RecentRounds
 );
 

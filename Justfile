@@ -86,3 +86,38 @@ reinstall: clean-all install
 
 # Equivalent of CI: install -> typecheck -> tests -> build
 ci: install typecheck test build
+
+# ---------- Container image (Containerfile / OCI) ----------
+# Local single-arch build (matches your host) — fast smoke test.
+image-build:
+    podman build -t fairway-hq:local -f Containerfile .
+
+# Local cross-arch sanity check: build both amd64 + arm64 via QEMU.
+# Slower (uses emulation); useful before tagging a release.
+image-build-multiarch:
+    podman build \
+        --platform=linux/amd64,linux/arm64 \
+        --manifest fairway-hq:local-multiarch \
+        -f Containerfile .
+
+# Run the locally-built image, mounting a named volume for the DB.
+# http://localhost:8080
+image-run:
+    podman run --rm -it \
+        --name fairway-hq-local \
+        -p 8080:8080 \
+        -v fairway-data:/app/data \
+        -e TZ=America/Chicago \
+        fairway-hq:local
+
+# `podman compose up` from compose.yaml (builds + runs in the foreground).
+image-up:
+    podman compose up --build
+
+image-down:
+    podman compose down
+
+# Show the image layers so you can sanity-check size before pushing.
+image-inspect:
+    podman images fairway-hq:local
+    podman history fairway-hq:local

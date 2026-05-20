@@ -1,3 +1,4 @@
+using FairwayHq.Api.Authorization;
 using FairwayHq.Api.Data;
 using FairwayHq.Api.Models;
 using FairwayHq.Api.Services;
@@ -19,14 +20,15 @@ public static class TabsEndpoints
 
         tabs.MapGet("/", async (AppDbContext db) =>
             (await TabsWithChildren(db).AsNoTracking().ToListAsync())
-            .Select(t => t.ToDto()));
+            .Select(t => t.ToDto()))
+            .RequireAuthorization(Policy.For(Permissions.TabsRead));
 
         tabs.MapGet("/{id}", async (string id, AppDbContext db) =>
         {
             var t = await TabsWithChildren(db).AsNoTracking()
                 .FirstOrDefaultAsync(x => x.Id == id);
             return t is null ? Results.NotFound() : Results.Ok(t.ToDto());
-        });
+        }).RequireAuthorization(Policy.For(Permissions.TabsRead));
 
         // Open a tab (no children yet)
         tabs.MapPost("/", async (PlayerTabDto dto, AppDbContext db) =>
@@ -39,7 +41,7 @@ public static class TabsEndpoints
             db.Tabs.Add(entity);
             await db.SaveChangesAsync();
             return Results.Created($"/api/tabs/{entity.Id}", entity.ToDto());
-        });
+        }).RequireAuthorization(Policy.For(Permissions.TabsWrite));
 
         // Update metadata (status, members, tip, tax, notes, etc.)
         tabs.MapPut("/{id}", async (string id, PlayerTabDto dto, AppDbContext db) =>
@@ -49,7 +51,7 @@ public static class TabsEndpoints
             entity.ApplyMeta(dto);
             await db.SaveChangesAsync();
             return Results.Ok(entity.ToDto());
-        });
+        }).RequireAuthorization(Policy.For(Permissions.TabsWrite));
 
         // Void: restore stock, reverse member charges, mark Voided.
         tabs.MapPost("/{id}/void", async (string id, AppDbContext db) =>
@@ -87,7 +89,7 @@ public static class TabsEndpoints
             await db.SaveChangesAsync();
             await tx.CommitAsync();
             return Results.Ok(entity.ToDto());
-        });
+        }).RequireAuthorization(Policy.For(Permissions.TabsVoid));
 
         // Settle: requires zero balance computed server-side
         tabs.MapPost("/{id}/settle", async (string id, AppDbContext db) =>
@@ -106,7 +108,7 @@ public static class TabsEndpoints
             entity.ClosedAt = DateTime.UtcNow.ToString("o");
             await db.SaveChangesAsync();
             return Results.Ok(entity.ToDto());
-        });
+        }).RequireAuthorization(Policy.For(Permissions.TabsSettle));
 
         // Reopen settled tab
         tabs.MapPost("/{id}/reopen", async (string id, AppDbContext db) =>
@@ -117,7 +119,7 @@ public static class TabsEndpoints
             entity.ClosedAt = null;
             await db.SaveChangesAsync();
             return Results.Ok(entity.ToDto());
-        });
+        }).RequireAuthorization(Policy.For(Permissions.TabsWrite));
 
         // ----- items -----
         tabs.MapPost("/{id}/items", async (string id, CreateLineItemDto body, AppDbContext db) =>
@@ -155,7 +157,7 @@ public static class TabsEndpoints
             var updated = await TabsWithChildren(db).AsNoTracking()
                 .FirstAsync(x => x.Id == id);
             return Results.Ok(updated.ToDto());
-        });
+        }).RequireAuthorization(Policy.For(Permissions.TabsWrite));
 
         tabs.MapPut("/{id}/items/{itemId}/quantity", async (string id, string itemId, AdjustQuantityBody body, AppDbContext db) =>
         {
@@ -185,7 +187,7 @@ public static class TabsEndpoints
             var updated = await TabsWithChildren(db).AsNoTracking()
                 .FirstAsync(x => x.Id == id);
             return Results.Ok(updated.ToDto());
-        });
+        }).RequireAuthorization(Policy.For(Permissions.TabsWrite));
 
         tabs.MapDelete("/{id}/items/{itemId}", async (string id, string itemId, AppDbContext db) =>
         {
@@ -209,7 +211,7 @@ public static class TabsEndpoints
             var updated = await TabsWithChildren(db).AsNoTracking()
                 .FirstAsync(x => x.Id == id);
             return Results.Ok(updated.ToDto());
-        });
+        }).RequireAuthorization(Policy.For(Permissions.TabsWrite));
 
         // ----- payments -----
         tabs.MapPost("/{id}/payments", async (string id, CreatePaymentDto body, AppDbContext db) =>
@@ -256,7 +258,7 @@ public static class TabsEndpoints
             var updated = await TabsWithChildren(db).AsNoTracking()
                 .FirstAsync(x => x.Id == id);
             return Results.Ok(updated.ToDto());
-        });
+        }).RequireAuthorization(Policy.For(Permissions.TabsPayment));
 
         tabs.MapDelete("/{id}/payments/{paymentId}", async (string id, string paymentId, AppDbContext db) =>
         {
@@ -284,7 +286,7 @@ public static class TabsEndpoints
             var updated = await TabsWithChildren(db).AsNoTracking()
                 .FirstAsync(x => x.Id == id);
             return Results.Ok(updated.ToDto());
-        });
+        }).RequireAuthorization(Policy.For(Permissions.TabsPayment));
     }
 
     public record AdjustQuantityBody(int Quantity);

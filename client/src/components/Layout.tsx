@@ -1,28 +1,63 @@
-import { useRef } from "react";
+import { useRef, type ReactNode } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
+import {
+  COURSES_READ,
+  MAINTENANCE_READ,
+  MEMBERS_READ,
+  PRODUCTS_READ,
+  STAFF_READ,
+  TABS_READ,
+  TEE_TIMES_READ,
+  TOURNAMENTS_READ,
+} from "../auth/permissions";
 import { useStore } from "../data/store";
 import { useToaster } from "./Toaster";
 
-const NAV = [
+interface NavItem {
+  to: string;
+  label: string;
+  icon: string;
+  /** Permission required to see this item; omit for "any authed user". */
+  permission?: string;
+}
+
+const NAV: NavItem[] = [
   { to: "/", label: "Dashboard", icon: "◎" },
-  { to: "/tee-times", label: "Tee Times", icon: "⛳" },
-  { to: "/members", label: "Members", icon: "👤" },
-  { to: "/courses", label: "Courses", icon: "🏞" },
-  { to: "/staff", label: "Staff", icon: "👥" },
-  { to: "/pro-shop", label: "Pro Shop", icon: "🛍" },
-  { to: "/tabs", label: "Player Tabs", icon: "🧾" },
-  { to: "/tournaments", label: "Tournaments", icon: "🏆" },
-  { to: "/maintenance", label: "Maintenance", icon: "🛠" },
+  { to: "/tee-times", label: "Tee Times", icon: "⛳", permission: TEE_TIMES_READ },
+  { to: "/members", label: "Members", icon: "👤", permission: MEMBERS_READ },
+  { to: "/courses", label: "Courses", icon: "🏞", permission: COURSES_READ },
+  { to: "/staff", label: "Staff", icon: "👥", permission: STAFF_READ },
+  { to: "/pro-shop", label: "Pro Shop", icon: "🛍", permission: PRODUCTS_READ },
+  { to: "/tabs", label: "Player Tabs", icon: "🧾", permission: TABS_READ },
+  {
+    to: "/tournaments",
+    label: "Tournaments",
+    icon: "🏆",
+    permission: TOURNAMENTS_READ,
+  },
+  {
+    to: "/maintenance",
+    label: "Maintenance",
+    icon: "🛠",
+    permission: MAINTENANCE_READ,
+  },
 ];
 
-export function Layout() {
+export function Layout({ children }: { children?: ReactNode }) {
   const { clear, data, exportSnapshot, importSnapshot, loading, error } =
     useStore();
   const toaster = useToaster();
   const navigate = useNavigate();
   const fileInput = useRef<HTMLInputElement>(null);
   const location = useLocation();
-  const current = NAV.find((n) =>
+  const { user, roles, hasPermission, logout, isAuthenticated } = useAuth();
+  // Hide nav items the user can't enter; the Dashboard entry has no
+  // permission gate (it's always visible to authenticated users).
+  const visibleNav = NAV.filter(
+    (n) => !n.permission || hasPermission(n.permission),
+  );
+  const current = visibleNav.find((n) =>
     n.to === "/" ? location.pathname === "/" : location.pathname.startsWith(n.to),
   );
 
@@ -81,7 +116,7 @@ export function Layout() {
             <div className="brand-sub">Golf Course Manager</div>
           </div>
         </div>
-        {NAV.map((item) => (
+        {visibleNav.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
@@ -97,6 +132,25 @@ export function Layout() {
           </NavLink>
         ))}
         <div className="footer">
+          {isAuthenticated && user && (
+            <div className="current-user">
+              <div className="current-user-name">
+                {user.name ?? user.username}
+              </div>
+              <div className="current-user-role">
+                {roles.length > 0 ? roles.join(" · ") : "no role"}
+              </div>
+              <button
+                className="reset-btn"
+                onClick={() => {
+                  void logout();
+                }}
+                style={{ marginTop: 6 }}
+              >
+                Sign out
+              </button>
+            </div>
+          )}
           <div className="server-status">
             <span
               className={`status-dot ${
@@ -180,7 +234,7 @@ export function Layout() {
               </button>
             </div>
           )}
-          <Outlet />
+          {children ?? <Outlet />}
         </main>
       </div>
     </div>

@@ -1,0 +1,68 @@
+name: image
+
+# Builds a multi-arch (linux/amd64, linux/arm64) image and pushes to
+# ghcr.io. Fires on:
+#   - any push to main → tag `main` + sha
+#   - a `v*` tag → semver tags (v1.2.3 → 1.2.3, 1.2, 1, latest)
+#   - manual dispatch from the Actions tab
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # QEMU is needed because the arm64 stages of the runtime image
+      # still get assembled under emulation on an amd64 runner. Build
+      # stages themselves cross-compile via -a $TARGETARCH, so this is
+      # cheap.
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/arm64
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix=,format=short
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+
+      - name: Build + push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Containerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Cache to GitHub Actions cache for free; first build is slow,
+          # subsequent builds reuse the npm + nuget restore layers.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

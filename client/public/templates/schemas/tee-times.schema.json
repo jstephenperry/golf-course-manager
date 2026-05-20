@@ -17,7 +17,7 @@
         "items": { "type": "string", "description": "Member id; must exist when the tab/charge flow refers to it." }
       },
       "cart": { "type": "boolean" },
-      "status": { "enum": ["Booked", "Checked In", "Completed", "Cancelled"] },
+      "status": { "enum": ["Booked", "Checked In", "Completed", "Cancelled", "No Show"] },
       "notes": { "type": "string" }
     }
   }

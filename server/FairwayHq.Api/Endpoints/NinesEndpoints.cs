@@ -1,3 +1,4 @@
+using FairwayHq.Api.Authorization;
 using FairwayHq.Api.Data;
 using FairwayHq.Api.Models;
 using Microsoft.EntityFrameworkCore;
@@ -29,7 +30,7 @@ public static class NinesEndpoints
                 .OrderBy(n => n.Name)
                 .ToListAsync();
             return Results.Ok(list.Select(n => n.ToDto()));
-        });
+        }).RequireAuthorization(Policy.For(Permissions.NinesRead));
 
         nines.MapGet("/{id}", async (string id, AppDbContext db) =>
         {
@@ -39,7 +40,7 @@ public static class NinesEndpoints
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.Id == id);
             return n is null ? Results.NotFound() : Results.Ok(n.ToDto());
-        });
+        }).RequireAuthorization(Policy.For(Permissions.NinesRead));
 
         nines.MapPost("/", async (NineDto dto, AppDbContext db) =>
         {
@@ -52,7 +53,7 @@ public static class NinesEndpoints
             await db.SaveChangesAsync();
             return Results.Created($"/api/nines/{n.Id}",
                 (await LoadDto(db, n.Id))!);
-        });
+        }).RequireAuthorization(Policy.For(Permissions.NinesWrite));
 
         nines.MapPut("/{id}", async (string id, NineDto dto, AppDbContext db) =>
         {
@@ -74,7 +75,7 @@ public static class NinesEndpoints
             ApplyStructure(existing, dto);
             await db.SaveChangesAsync();
             return Results.Ok((await LoadDto(db, id))!);
-        });
+        }).RequireAuthorization(Policy.For(Permissions.NinesWrite));
 
         nines.MapDelete("/{id}", async (string id, AppDbContext db) =>
         {
@@ -91,7 +92,7 @@ public static class NinesEndpoints
             db.Nines.Remove(n);
             await db.SaveChangesAsync();
             return Results.NoContent();
-        });
+        }).RequireAuthorization(Policy.For(Permissions.NinesWrite));
     }
 
     // Reconciles the inbound DTO onto a (cleared) Nine, generating ids

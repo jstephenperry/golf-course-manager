@@ -4,7 +4,24 @@ The Fairway HQ app ships with no synthetic data — you provide initial state vi
 
 Each `<entity>.template.json` is a small JSON array with one example row demonstrating the field shape. Drop your full dataset into a copy of that file, then upload it from the in-app **Import data…** page (or `POST` it directly to `/api/import/<entity>` with `Content-Type: application/json`).
 
-Validation strategy: each row is checked individually. Valid rows commit; invalid rows return per-row errors in the response. A re-run with the same `id` values is safe — duplicates report `id_exists` and skip.
+Validation strategy: each row is checked individually. Valid rows commit; invalid rows return per-row errors in the response.
+
+**Idempotency**: re-running the same import is safe — the server skips rows that already exist, by `id` *or* by entity-specific natural key, and reports them in the `errors[]` array (with `error: "id_exists"` or `"duplicate_natural_key"`). The natural keys are:
+
+| Entity | Natural key | Notes |
+| --- | --- | --- |
+| `members` | `email` (case-insensitive) | Skipped if email is blank |
+| `staff` | `email` (case-insensitive) | Skipped if email is blank |
+| `courses` | `name` (case-insensitive) | |
+| `nines` | `name` (case-insensitive) | |
+| `products` | `sku` (case-insensitive) | |
+| `tee-times` | `(date, time, courseId)` | A "slot" is one row per course per timestamp |
+| `tournaments` | `(name, date)` | Same name across different years is fine |
+| `shifts` | `(staffId, date, start, end)` | Split shifts on the same day are allowed |
+| `weekly-templates` | `(staffId, dayOfWeek, start, end)` | |
+| `maintenance` | *(id-only)* | Titles legitimately repeat; supply `id` for idempotency |
+
+The check fires whenever the natural-key columns are present. If you also supply an explicit `id` that matches the *same* existing row, that's fine — only different ids with the same natural key are flagged as duplicates.
 
 ## Dependency order
 

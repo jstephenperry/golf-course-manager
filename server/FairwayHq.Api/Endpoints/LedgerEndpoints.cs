@@ -1,3 +1,4 @@
+using FairwayHq.Api.Authorization;
 using FairwayHq.Api.Data;
 using FairwayHq.Api.Models;
 using FairwayHq.Api.Services;
@@ -44,7 +45,7 @@ public static class LedgerEndpoints
                 var page = rows.Take(take).Select(e => e.ToDto()).ToList();
                 return Results.Ok(new MemberLedgerListDto(page, hasMore));
             }
-        ).WithTags("Ledger");
+        ).WithTags("Ledger").RequireAuthorization(Policy.For(Permissions.LedgerRead));
 
         app.MapPost("/api/members/{id}/charges",
             async (string id, CreateManualChargeDto body, AppDbContext db) =>
@@ -70,7 +71,7 @@ public static class LedgerEndpoints
                     $"/api/members/{id}/ledger/{result.Entry!.Id}",
                     result.Entry.ToDto());
             }
-        ).WithTags("Ledger");
+        ).WithTags("Ledger").RequireAuthorization(Policy.For(Permissions.LedgerCharge));
 
         app.MapPost("/api/members/{id}/payments",
             async (string id, CreateManualPaymentDto body, AppDbContext db) =>
@@ -95,7 +96,7 @@ public static class LedgerEndpoints
                     $"/api/members/{id}/ledger/{result.Entry!.Id}",
                     result.Entry.ToDto());
             }
-        ).WithTags("Ledger");
+        ).WithTags("Ledger").RequireAuthorization(Policy.For(Permissions.LedgerPayment));
 
         app.MapPost("/api/members/ledger/{entryId}/void",
             async (string entryId, VoidLedgerEntryDto body, AppDbContext db) =>
@@ -114,6 +115,6 @@ public static class LedgerEndpoints
                 await tx.CommitAsync();
                 return Results.Ok(result.Entry!.ToDto());
             }
-        ).WithTags("Ledger");
+        ).WithTags("Ledger").RequireAuthorization(Policy.For(Permissions.LedgerVoid));
     }
 }

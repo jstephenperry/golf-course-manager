@@ -132,8 +132,34 @@ public class MemberOverviewTests : IClassFixture<ApiFactory>
         Assert.NotNull(overview);
         Assert.Equal(1, overview!.LifetimeRounds);
         Assert.Equal(past, overview.LastPlayedDate);
+        Assert.Equal(0, overview.NoShowCount);
         Assert.Single(overview.RecentRounds);
         Assert.Equal("Completed", overview.RecentRounds[0].Status);
+    }
+
+    [Fact]
+    public async Task Overview_counts_no_show_rounds_separately_from_lifetime_rounds()
+    {
+        var client = _factory.CreateClient();
+        await TestSeed.MinimalAsync(client);
+        var memberId = await CreateMember(client, "NoShow", "Counter");
+
+        var today = DateTime.UtcNow.Date;
+        await CreateTeeTime(client, today.AddDays(-30).ToString("yyyy-MM-dd"), "08:00", memberId, "Completed");
+        await CreateTeeTime(client, today.AddDays(-21).ToString("yyyy-MM-dd"), "09:00", memberId, "No Show");
+        await CreateTeeTime(client, today.AddDays(-14).ToString("yyyy-MM-dd"), "10:00", memberId, "Completed");
+        await CreateTeeTime(client, today.AddDays(-7).ToString("yyyy-MM-dd"),  "11:00", memberId, "No Show");
+        // Booked / Cancelled / Checked In must not show up in either count.
+        await CreateTeeTime(client, today.AddDays(3).ToString("yyyy-MM-dd"),   "08:00", memberId, "Booked");
+        await CreateTeeTime(client, today.AddDays(-1).ToString("yyyy-MM-dd"),  "08:00", memberId, "Cancelled");
+
+        var overview = await client.GetFromJsonAsync<MemberOverviewDto>(
+            $"/api/members/{memberId}/overview");
+
+        Assert.NotNull(overview);
+        Assert.Equal(2, overview!.LifetimeRounds);
+        Assert.Equal(2, overview.NoShowCount);
+        Assert.All(overview.RecentRounds, r => Assert.Equal("Completed", r.Status));
     }
 
     private static async Task<string> CreateMember(HttpClient client, string first, string last)
