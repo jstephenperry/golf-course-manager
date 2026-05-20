@@ -21,5 +21,10 @@ rm -f "$API_DIR"/fairway.db*
 echo "[e2e] Starting API on http://localhost:5210"
 cd "$API_DIR"
 export ASPNETCORE_URLS="http://localhost:5210"
-export ASPNETCORE_ENVIRONMENT="Development"
+# Testing (not Development) so the API uses TestAuthHandler: with no auth
+# header, requests are synthesized as an `owner` (same mechanism as the
+# integration suite). Development requires a real Keycloak JWT on every
+# /api/* call (default-deny RBAC FallbackPolicy), which E2E can't provide
+# — that produced uniform 401s and every spec failing.
+export ASPNETCORE_ENVIRONMENT="Testing"
 exec dotnet run --no-launch-profile
