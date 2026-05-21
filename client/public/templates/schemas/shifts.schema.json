@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fairwayhq.example/schemas/shifts.schema.json",
+  "title": "Shifts import",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["staffId", "date", "start", "end"],
+    "additionalProperties": true,
+    "properties": {
+      "id": { "type": "string", "description": "Optional; auto-generated as shft_<12hex>." },
+      "staffId": { "type": "string", "description": "Must reference an existing Staff id." },
+      "date": { "type": "string", "description": "YYYY-MM-DD" },
+      "start": { "type": "string", "description": "HH:MM" },
+      "end": { "type": "string", "description": "HH:MM" },
+      "notes": { "type": "string" }
+    }
+  }
+}

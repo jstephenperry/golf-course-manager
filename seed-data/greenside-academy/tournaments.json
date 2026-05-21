@@ -1,0 +1,46 @@
+[
+  {
+    "id": "trn_jr_dev_apr",
+    "name": "Junior Development Cup — Spring",
+    "date": "2026-04-26",
+    "format": "Stroke Play",
+    "courseId": "crs_academy_loop",
+    "entryFee": 35.00,
+    "maxPlayers": 24,
+    "registered": ["mbr_acad_kira", "mbr_acad_devin"],
+    "status": "Completed"
+  },
+  {
+    "id": "trn_wedge_wars",
+    "name": "Wedge Wars Member Game",
+    "date": "2026-06-07",
+    "format": "Scramble",
+    "courseId": "crs_academy_loop",
+    "entryFee": 50.00,
+    "maxPlayers": 40,
+    "registered": ["mbr_acad_aiden", "mbr_acad_morgan", "mbr_acad_brian", "mbr_acad_kim", "mbr_acad_juno"],
+    "status": "Scheduled"
+  },
+  {
+    "id": "trn_jr_open_summer",
+    "name": "Greenside Junior Open",
+    "date": "2026-07-19",
+    "format": "Stroke Play",
+    "courseId": "crs_tournament_loop",
+    "entryFee": 75.00,
+    "maxPlayers": 48,
+    "registered": ["mbr_acad_riley", "mbr_acad_kira", "mbr_acad_devin"],
+    "status": "Scheduled"
+  },
+  {
+    "id": "trn_club_champ",
+    "name": "Academy Club Championship",
+    "date": "2026-09-12",
+    "format": "Match Play",
+    "courseId": "crs_tournament_loop",
+    "entryFee": 100.00,
+    "maxPlayers": 32,
+    "registered": ["mbr_acad_sasha", "mbr_acad_riley", "mbr_acad_aiden"],
+    "status": "Scheduled"
+  }
+]

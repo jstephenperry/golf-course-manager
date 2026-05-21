@@ -1,0 +1,71 @@
+[
+  {
+    "id": "nin_forge",
+    "name": "The Forge",
+    "description": "Pure wedge work — every hole inside 100 yards. Designed for shot-shape, trajectory, and spin control.",
+    "notes": "Junior tees average 55 yards; tour tees average 84.",
+    "teeSets": [
+      { "id": "tee_forge_tour",    "name": "Tour",    "color": "#111111", "sortOrder": 0 },
+      { "id": "tee_forge_member",  "name": "Member",  "color": "#1f4d8a", "sortOrder": 1 },
+      { "id": "tee_forge_forward", "name": "Forward", "color": "#dddddd", "sortOrder": 2 },
+      { "id": "tee_forge_junior",  "name": "Junior",  "color": "#b73838", "sortOrder": 3 }
+    ],
+    "holes": [
+      { "number": 1, "par": 3, "handicapIndex": 9, "notes": "Open green — warm-up hole.",        "yardages": [ {"teeSetId":"tee_forge_tour","yards":75}, {"teeSetId":"tee_forge_member","yards":70}, {"teeSetId":"tee_forge_forward","yards":60}, {"teeSetId":"tee_forge_junior","yards":45} ] },
+      { "number": 2, "par": 3, "handicapIndex": 8, "notes": "Two-tier green.",                    "yardages": [ {"teeSetId":"tee_forge_tour","yards":85}, {"teeSetId":"tee_forge_member","yards":80}, {"teeSetId":"tee_forge_forward","yards":70}, {"teeSetId":"tee_forge_junior","yards":55} ] },
+      { "number": 3, "par": 3, "handicapIndex": 5, "notes": "Pin-tucked back right.",             "yardages": [ {"teeSetId":"tee_forge_tour","yards":95}, {"teeSetId":"tee_forge_member","yards":90}, {"teeSetId":"tee_forge_forward","yards":80}, {"teeSetId":"tee_forge_junior","yards":65} ] },
+      { "number": 4, "par": 3, "handicapIndex": 7, "notes": "Water carry — confidence builder.",  "yardages": [ {"teeSetId":"tee_forge_tour","yards":65}, {"teeSetId":"tee_forge_member","yards":60}, {"teeSetId":"tee_forge_forward","yards":50}, {"teeSetId":"tee_forge_junior","yards":40} ] },
+      { "number": 5, "par": 3, "handicapIndex": 2, "notes": "Elevated green; club up.",           "yardages": [ {"teeSetId":"tee_forge_tour","yards":100},{"teeSetId":"tee_forge_member","yards":95}, {"teeSetId":"tee_forge_forward","yards":85}, {"teeSetId":"tee_forge_junior","yards":70} ] },
+      { "number": 6, "par": 3, "handicapIndex": 3, "notes": "Island green.",                       "yardages": [ {"teeSetId":"tee_forge_tour","yards":90}, {"teeSetId":"tee_forge_member","yards":85}, {"teeSetId":"tee_forge_forward","yards":75}, {"teeSetId":"tee_forge_junior","yards":60} ] },
+      { "number": 7, "par": 3, "handicapIndex": 6, "notes": "Bunker short-left.",                  "yardages": [ {"teeSetId":"tee_forge_tour","yards":70}, {"teeSetId":"tee_forge_member","yards":65}, {"teeSetId":"tee_forge_forward","yards":55}, {"teeSetId":"tee_forge_junior","yards":45} ] },
+      { "number": 8, "par": 3, "handicapIndex": 4, "notes": "Crosswind hole; flag tells lie.",    "yardages": [ {"teeSetId":"tee_forge_tour","yards":80}, {"teeSetId":"tee_forge_member","yards":75}, {"teeSetId":"tee_forge_forward","yards":65}, {"teeSetId":"tee_forge_junior","yards":50} ] },
+      { "number": 9, "par": 3, "handicapIndex": 1, "notes": "Long forge finisher into headwind.", "yardages": [ {"teeSetId":"tee_forge_tour","yards":95}, {"teeSetId":"tee_forge_member","yards":90}, {"teeSetId":"tee_forge_forward","yards":80}, {"teeSetId":"tee_forge_junior","yards":65} ] }
+    ]
+  },
+  {
+    "id": "nin_crucible",
+    "name": "The Crucible",
+    "description": "Short-iron transition — 95-150 yards. The proving ground for scoring clubs (gap, pitching, 9-iron).",
+    "notes": "Greens are firm; designed to reward true strikes.",
+    "teeSets": [
+      { "id": "tee_cru_tour",    "name": "Tour",    "color": "#111111", "sortOrder": 0 },
+      { "id": "tee_cru_member",  "name": "Member",  "color": "#1f4d8a", "sortOrder": 1 },
+      { "id": "tee_cru_forward", "name": "Forward", "color": "#dddddd", "sortOrder": 2 },
+      { "id": "tee_cru_junior",  "name": "Junior",  "color": "#b73838", "sortOrder": 3 }
+    ],
+    "holes": [
+      { "number": 1, "par": 3, "handicapIndex": 6, "notes": "",                                  "yardages": [ {"teeSetId":"tee_cru_tour","yards":125},{"teeSetId":"tee_cru_member","yards":115},{"teeSetId":"tee_cru_forward","yards":105},{"teeSetId":"tee_cru_junior","yards":85} ] },
+      { "number": 2, "par": 3, "handicapIndex": 3, "notes": "Deep bunker fronts the green.",     "yardages": [ {"teeSetId":"tee_cru_tour","yards":140},{"teeSetId":"tee_cru_member","yards":130},{"teeSetId":"tee_cru_forward","yards":120},{"teeSetId":"tee_cru_junior","yards":95} ] },
+      { "number": 3, "par": 3, "handicapIndex": 8, "notes": "",                                  "yardages": [ {"teeSetId":"tee_cru_tour","yards":110},{"teeSetId":"tee_cru_member","yards":100},{"teeSetId":"tee_cru_forward","yards":90}, {"teeSetId":"tee_cru_junior","yards":75} ] },
+      { "number": 4, "par": 3, "handicapIndex": 1, "notes": "Pin behind front bunker; pure precision.", "yardages": [ {"teeSetId":"tee_cru_tour","yards":150},{"teeSetId":"tee_cru_member","yards":140},{"teeSetId":"tee_cru_forward","yards":130},{"teeSetId":"tee_cru_junior","yards":105} ] },
+      { "number": 5, "par": 3, "handicapIndex": 5, "notes": "Punchbowl green.",                  "yardages": [ {"teeSetId":"tee_cru_tour","yards":130},{"teeSetId":"tee_cru_member","yards":120},{"teeSetId":"tee_cru_forward","yards":110},{"teeSetId":"tee_cru_junior","yards":90} ] },
+      { "number": 6, "par": 3, "handicapIndex": 9, "notes": "Reset hole.",                       "yardages": [ {"teeSetId":"tee_cru_tour","yards":105},{"teeSetId":"tee_cru_member","yards":95}, {"teeSetId":"tee_cru_forward","yards":85}, {"teeSetId":"tee_cru_junior","yards":70} ] },
+      { "number": 7, "par": 3, "handicapIndex": 2, "notes": "Uphill — adds half a club.",         "yardages": [ {"teeSetId":"tee_cru_tour","yards":145},{"teeSetId":"tee_cru_member","yards":135},{"teeSetId":"tee_cru_forward","yards":125},{"teeSetId":"tee_cru_junior","yards":100} ] },
+      { "number": 8, "par": 3, "handicapIndex": 7, "notes": "",                                  "yardages": [ {"teeSetId":"tee_cru_tour","yards":115},{"teeSetId":"tee_cru_member","yards":105},{"teeSetId":"tee_cru_forward","yards":95}, {"teeSetId":"tee_cru_junior","yards":80} ] },
+      { "number": 9, "par": 3, "handicapIndex": 4, "notes": "Risk-reward hole-locating finisher.","yardages": [ {"teeSetId":"tee_cru_tour","yards":135},{"teeSetId":"tee_cru_member","yards":125},{"teeSetId":"tee_cru_forward","yards":115},{"teeSetId":"tee_cru_junior","yards":95} ] }
+    ]
+  },
+  {
+    "id": "nin_proving",
+    "name": "The Proving Ground",
+    "description": "Long-iron / hybrid par 3s — 140-225 yards. Tournament-grade. Where you find out what your full bag really does.",
+    "notes": "Signature 8th plays 225 from the Tour deck.",
+    "teeSets": [
+      { "id": "tee_prv_tour",    "name": "Tour",    "color": "#111111", "sortOrder": 0 },
+      { "id": "tee_prv_member",  "name": "Member",  "color": "#1f4d8a", "sortOrder": 1 },
+      { "id": "tee_prv_forward", "name": "Forward", "color": "#dddddd", "sortOrder": 2 },
+      { "id": "tee_prv_junior",  "name": "Junior",  "color": "#b73838", "sortOrder": 3 }
+    ],
+    "holes": [
+      { "number": 1, "par": 3, "handicapIndex": 7, "notes": "",                                  "yardages": [ {"teeSetId":"tee_prv_tour","yards":170},{"teeSetId":"tee_prv_member","yards":155},{"teeSetId":"tee_prv_forward","yards":140},{"teeSetId":"tee_prv_junior","yards":115} ] },
+      { "number": 2, "par": 3, "handicapIndex": 3, "notes": "Bunker-free; pure strike test.",    "yardages": [ {"teeSetId":"tee_prv_tour","yards":195},{"teeSetId":"tee_prv_member","yards":180},{"teeSetId":"tee_prv_forward","yards":165},{"teeSetId":"tee_prv_junior","yards":135} ] },
+      { "number": 3, "par": 3, "handicapIndex": 1, "notes": "Forced carry over water.",          "yardages": [ {"teeSetId":"tee_prv_tour","yards":215},{"teeSetId":"tee_prv_member","yards":200},{"teeSetId":"tee_prv_forward","yards":180},{"teeSetId":"tee_prv_junior","yards":145} ] },
+      { "number": 4, "par": 3, "handicapIndex": 8, "notes": "",                                  "yardages": [ {"teeSetId":"tee_prv_tour","yards":160},{"teeSetId":"tee_prv_member","yards":145},{"teeSetId":"tee_prv_forward","yards":130},{"teeSetId":"tee_prv_junior","yards":110} ] },
+      { "number": 5, "par": 3, "handicapIndex": 5, "notes": "",                                  "yardages": [ {"teeSetId":"tee_prv_tour","yards":185},{"teeSetId":"tee_prv_member","yards":170},{"teeSetId":"tee_prv_forward","yards":155},{"teeSetId":"tee_prv_junior","yards":125} ] },
+      { "number": 6, "par": 3, "handicapIndex": 2, "notes": "Pin tucked behind two bunkers.",    "yardages": [ {"teeSetId":"tee_prv_tour","yards":205},{"teeSetId":"tee_prv_member","yards":190},{"teeSetId":"tee_prv_forward","yards":175},{"teeSetId":"tee_prv_junior","yards":140} ] },
+      { "number": 7, "par": 3, "handicapIndex": 6, "notes": "",                                  "yardages": [ {"teeSetId":"tee_prv_tour","yards":175},{"teeSetId":"tee_prv_member","yards":160},{"teeSetId":"tee_prv_forward","yards":145},{"teeSetId":"tee_prv_junior","yards":120} ] },
+      { "number": 8, "par": 3, "handicapIndex": 4, "notes": "Signature long. Drive-length par 3.","yardages": [ {"teeSetId":"tee_prv_tour","yards":225},{"teeSetId":"tee_prv_member","yards":210},{"teeSetId":"tee_prv_forward","yards":195},{"teeSetId":"tee_prv_junior","yards":155} ] },
+      { "number": 9, "par": 3, "handicapIndex": 9, "notes": "Downhill scoring finisher.",        "yardages": [ {"teeSetId":"tee_prv_tour","yards":190},{"teeSetId":"tee_prv_member","yards":175},{"teeSetId":"tee_prv_forward","yards":160},{"teeSetId":"tee_prv_junior","yards":130} ] }
+    ]
+  }
+]

@@ -1,0 +1,44 @@
+{
+  "json.schemas": [
+    {
+      "fileMatch": ["client/public/templates/members.template.json"],
+      "url": "./client/public/templates/schemas/members.schema.json"
+    },
+    {
+      "fileMatch": ["client/public/templates/courses.template.json"],
+      "url": "./client/public/templates/schemas/courses.schema.json"
+    },
+    {
+      "fileMatch": ["client/public/templates/nines.template.json"],
+      "url": "./client/public/templates/schemas/nines.schema.json"
+    },
+    {
+      "fileMatch": ["client/public/templates/products.template.json"],
+      "url": "./client/public/templates/schemas/products.schema.json"
+    },
+    {
+      "fileMatch": ["client/public/templates/staff.template.json"],
+      "url": "./client/public/templates/schemas/staff.schema.json"
+    },
+    {
+      "fileMatch": ["client/public/templates/tee-times.template.json"],
+      "url": "./client/public/templates/schemas/tee-times.schema.json"
+    },
+    {
+      "fileMatch": ["client/public/templates/shifts.template.json"],
+      "url": "./client/public/templates/schemas/shifts.schema.json"
+    },
+    {
+      "fileMatch": ["client/public/templates/weekly-templates.template.json"],
+      "url": "./client/public/templates/schemas/weekly-templates.schema.json"
+    },
+    {
+      "fileMatch": ["client/public/templates/tournaments.template.json"],
+      "url": "./client/public/templates/schemas/tournaments.schema.json"
+    },
+    {
+      "fileMatch": ["client/public/templates/maintenance.template.json"],
+      "url": "./client/public/templates/schemas/maintenance.schema.json"
+    }
+  ]
+}

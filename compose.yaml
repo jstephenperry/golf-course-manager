@@ -1,0 +1,25 @@
+# Local smoke-test compose. Builds the image from this checkout and
+# runs it on http://localhost:8080. For real deployments, use the
+# pre-built ghcr.io image via deploy/pi/compose.yaml.
+#
+#   podman compose up --build     # or `docker compose up --build`
+#
+services:
+  fairway-hq:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: fairway-hq:local
+    container_name: fairway-hq-local
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - fairway-data:/app/data
+    environment:
+      # Override per local preference; only relevant for date displays
+      # in the API logs since the SPA reads the browser's locale.
+      TZ: America/Chicago
+
+volumes:
+  fairway-data:

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fairwayhq.example/schemas/tournaments.schema.json",
+  "title": "Tournaments import",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["name", "date", "courseId"],
+    "additionalProperties": true,
+    "properties": {
+      "id": { "type": "string", "description": "Optional; auto-generated as trn_<12hex>." },
+      "name": { "type": "string", "minLength": 1 },
+      "date": { "type": "string", "description": "YYYY-MM-DD" },
+      "format": { "enum": ["Stroke Play", "Best Ball", "Scramble", "Match Play"] },
+      "courseId": { "type": "string", "description": "Must reference an existing Course id." },
+      "entryFee": { "type": "number", "minimum": 0 },
+      "maxPlayers": { "type": "integer", "minimum": 0 },
+      "registered": { "type": "array", "items": { "type": "string" } },
+      "status": { "enum": ["Scheduled", "In Progress", "Completed", "Cancelled"] }
+    }
+  }
+}

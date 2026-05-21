@@ -1,0 +1,44 @@
+[
+  { "id": "wtmp_calderon_mon", "staffId": "stf_dir_calderon",    "dayOfWeek": 1, "start": "07:00", "end": "15:00", "notes": "Director hours: lessons + program oversight." },
+  { "id": "wtmp_calderon_tue", "staffId": "stf_dir_calderon",    "dayOfWeek": 2, "start": "07:00", "end": "15:00", "notes": "" },
+  { "id": "wtmp_calderon_thu", "staffId": "stf_dir_calderon",    "dayOfWeek": 4, "start": "07:00", "end": "15:00", "notes": "" },
+  { "id": "wtmp_calderon_fri", "staffId": "stf_dir_calderon",    "dayOfWeek": 5, "start": "07:00", "end": "15:00", "notes": "" },
+
+  { "id": "wtmp_levine_tue",   "staffId": "stf_coach_levine",    "dayOfWeek": 2, "start": "08:00", "end": "17:00", "notes": "Adult intermediate block 10-14." },
+  { "id": "wtmp_levine_wed",   "staffId": "stf_coach_levine",    "dayOfWeek": 3, "start": "08:00", "end": "17:00", "notes": "" },
+  { "id": "wtmp_levine_thu",   "staffId": "stf_coach_levine",    "dayOfWeek": 4, "start": "08:00", "end": "17:00", "notes": "" },
+  { "id": "wtmp_levine_fri",   "staffId": "stf_coach_levine",    "dayOfWeek": 5, "start": "08:00", "end": "17:00", "notes": "" },
+  { "id": "wtmp_levine_sat",   "staffId": "stf_coach_levine",    "dayOfWeek": 6, "start": "07:00", "end": "13:00", "notes": "Weekend half-day." },
+
+  { "id": "wtmp_anand_tue",    "staffId": "stf_jr_anand",        "dayOfWeek": 2, "start": "09:00", "end": "18:00", "notes": "Junior program day." },
+  { "id": "wtmp_anand_thu",    "staffId": "stf_jr_anand",        "dayOfWeek": 4, "start": "09:00", "end": "18:00", "notes": "" },
+  { "id": "wtmp_anand_fri",    "staffId": "stf_jr_anand",        "dayOfWeek": 5, "start": "09:00", "end": "18:00", "notes": "" },
+  { "id": "wtmp_anand_sat",    "staffId": "stf_jr_anand",        "dayOfWeek": 6, "start": "08:00", "end": "14:00", "notes": "Saturday junior clinic." },
+
+  { "id": "wtmp_fukuda_mon",   "staffId": "stf_perf_fukuda",     "dayOfWeek": 1, "start": "10:00", "end": "18:00", "notes": "Performance assessments." },
+  { "id": "wtmp_fukuda_wed",   "staffId": "stf_perf_fukuda",     "dayOfWeek": 3, "start": "10:00", "end": "18:00", "notes": "" },
+  { "id": "wtmp_fukuda_fri",   "staffId": "stf_perf_fukuda",     "dayOfWeek": 5, "start": "10:00", "end": "18:00", "notes": "" },
+
+  { "id": "wtmp_roussos_thu",  "staffId": "stf_fit_roussos",     "dayOfWeek": 4, "start": "11:00", "end": "19:00", "notes": "Wedge fittings." },
+  { "id": "wtmp_roussos_sat",  "staffId": "stf_fit_roussos",     "dayOfWeek": 6, "start": "09:00", "end": "17:00", "notes": "Saturday fitting day." },
+
+  { "id": "wtmp_okonkwo_tue",  "staffId": "stf_shop_okonkwo",    "dayOfWeek": 2, "start": "07:00", "end": "16:00", "notes": "" },
+  { "id": "wtmp_okonkwo_wed",  "staffId": "stf_shop_okonkwo",    "dayOfWeek": 3, "start": "07:00", "end": "16:00", "notes": "" },
+  { "id": "wtmp_okonkwo_thu",  "staffId": "stf_shop_okonkwo",    "dayOfWeek": 4, "start": "07:00", "end": "16:00", "notes": "" },
+  { "id": "wtmp_okonkwo_fri",  "staffId": "stf_shop_okonkwo",    "dayOfWeek": 5, "start": "07:00", "end": "16:00", "notes": "" },
+  { "id": "wtmp_okonkwo_sat",  "staffId": "stf_shop_okonkwo",    "dayOfWeek": 6, "start": "06:30", "end": "15:30", "notes": "Weekend open." },
+
+  { "id": "wtmp_vega_mon",     "staffId": "stf_grnk_vega",       "dayOfWeek": 1, "start": "05:00", "end": "13:00", "notes": "Mow + bunker rotation." },
+  { "id": "wtmp_vega_wed",     "staffId": "stf_grnk_vega",       "dayOfWeek": 3, "start": "05:00", "end": "13:00", "notes": "" },
+  { "id": "wtmp_vega_fri",     "staffId": "stf_grnk_vega",       "dayOfWeek": 5, "start": "05:00", "end": "13:00", "notes": "" },
+  { "id": "wtmp_vega_sat",     "staffId": "stf_grnk_vega",       "dayOfWeek": 6, "start": "05:00", "end": "13:00", "notes": "Weekend prep." },
+
+  { "id": "wtmp_halloran_sat", "staffId": "stf_caddie_halloran", "dayOfWeek": 6, "start": "06:30", "end": "14:30", "notes": "Weekend looper for competitive members." },
+  { "id": "wtmp_halloran_sun", "staffId": "stf_caddie_halloran", "dayOfWeek": 0, "start": "06:30", "end": "14:30", "notes": "" },
+
+  { "id": "wtmp_park_tue",     "staffId": "stf_asst_park",       "dayOfWeek": 2, "start": "12:00", "end": "20:30", "notes": "Twilight starter." },
+  { "id": "wtmp_park_wed",     "staffId": "stf_asst_park",       "dayOfWeek": 3, "start": "12:00", "end": "20:30", "notes": "" },
+  { "id": "wtmp_park_thu",     "staffId": "stf_asst_park",       "dayOfWeek": 4, "start": "12:00", "end": "20:30", "notes": "" },
+  { "id": "wtmp_park_fri",     "staffId": "stf_asst_park",       "dayOfWeek": 5, "start": "12:00", "end": "20:30", "notes": "" },
+  { "id": "wtmp_park_sun",     "staffId": "stf_asst_park",       "dayOfWeek": 0, "start": "10:00", "end": "18:30", "notes": "Sunday afternoon." }
+]

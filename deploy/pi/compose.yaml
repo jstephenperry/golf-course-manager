@@ -1,0 +1,78 @@
+# Production compose for a single-Pi self-hosted course deployment.
+# Drop this file (and Caddyfile) on the Pi at /opt/fairway-hq/ and run:
+#
+#   sudo podman compose -f /opt/fairway-hq/compose.yaml up -d
+#
+# Caddy terminates TLS and is the only thing exposed to the LAN. The
+# fairway-hq container is reachable only on the internal compose
+# network. The `io.containers.autoupdate=registry` label tells the
+# system-wide podman-auto-update.timer to pull a new image from ghcr.io
+# and restart this service when one is published (see setup-pi.md).
+
+services:
+  caddy:
+    image: docker.io/library/caddy:2-alpine
+    container_name: fairway-caddy
+    restart: always
+    ports:
+      - "443:443"        # primary TLS port for the LAN
+      - "80:80"          # ACME challenge + HTTP→HTTPS redirect (mode 2)
+      - "8443:8443"      # internal-CA mode (mode 1) — see Caddyfile
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:Z,ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      fairway-hq:
+        condition: service_healthy
+    labels:
+      io.containers.autoupdate: registry
+
+  fairway-hq:
+    image: ghcr.io/jstephenperry/golf-course-manager:latest
+    container_name: fairway-hq
+    restart: always
+    # No host port exposure. Caddy is the only ingress; the API is
+    # reachable from Caddy on the compose network via its service name.
+    expose:
+      - "8080"
+    volumes:
+      - fairway-data:/app/data
+    environment:
+      # Override per course. Container defaults to UTC, which skews
+      # "today's tee sheet" calculations server-side. Use the course's
+      # IANA zone (America/Chicago, America/Denver, America/Los_Angeles,
+      # America/New_York, etc.).
+      TZ: America/Chicago
+      # Run as Production. Combined with the required auth vars below, the
+      # API refuses to start with an empty Authority in Production — there
+      # is no silent "no-auth" prod mode.
+      ASPNETCORE_ENVIRONMENT: Production
+      # OIDC validation — REQUIRED in production. These are sourced from an
+      # .env file sitting next to this compose file (see setup-pi.md §3).
+      # The `:?` syntax makes the stack refuse to start if either is unset
+      # or empty, so a course can never accidentally come up unauthenticated.
+      #   FAIRWAY_AUTH_AUTHORITY=https://fairway.local:8443/auth/realms/fairway-hq
+      #   FAIRWAY_AUTH_AUDIENCE=fairway-hq-spa
+      Authentication__Keycloak__Authority: ${FAIRWAY_AUTH_AUTHORITY:?set FAIRWAY_AUTH_AUTHORITY in /opt/fairway-hq/.env — prod requires OIDC (see setup-pi.md)}
+      Authentication__Keycloak__Audience: ${FAIRWAY_AUTH_AUDIENCE:?set FAIRWAY_AUTH_AUDIENCE in /opt/fairway-hq/.env — prod requires OIDC (see setup-pi.md)}
+    # Declared here (not just in the image): Podman runs OCI-format images,
+    # which ignore the Containerfile HEALTHCHECK. This compose-level probe
+    # uses the bundled curl-less .NET probe so `podman ps` and the
+    # podman-auto-update health gate can tell a wedged container from a
+    # healthy one and roll back a bad image instead of leaving it running.
+    healthcheck:
+      test: ["CMD", "dotnet", "/healthcheck/HealthCheck.dll", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    labels:
+      io.containers.autoupdate: registry
+
+volumes:
+  # Named volume — Podman owns the perms so the in-container user can
+  # write the SQLite WAL without host-side chown gymnastics.
+  fairway-data:
+  caddy_data:
+  caddy_config:

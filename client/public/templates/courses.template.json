@@ -1,0 +1,15 @@
+[
+  {
+    "_comment": "Required: name. Status ∈ Open|Closed|Cart Path Only. id is optional. frontNineId/backNineId are optional FKs to Nines — if specified, those Nines must already be imported. Total holes/par/yardage are derived from the referenced Nines and are not stored on the Course.",
+    "id": "crs_oak_redbud",
+    "name": "Oak / Redbud",
+    "frontNineId": "nin_oak",
+    "backNineId": "nin_redbud",
+    "rating": 74.2,
+    "slope": 138,
+    "status": "Open",
+    "openTime": "06:00",
+    "closeTime": "18:00",
+    "notes": ""
+  }
+]

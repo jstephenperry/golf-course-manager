@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fairwayhq.example/schemas/nines.schema.json",
+  "title": "Nines import",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["name", "holes"],
+    "additionalProperties": true,
+    "properties": {
+      "id": { "type": "string", "description": "Optional; auto-generated as nin_<12hex>." },
+      "name": { "type": "string", "minLength": 1 },
+      "description": { "type": "string" },
+      "notes": { "type": "string" },
+      "teeSets": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["name"],
+          "additionalProperties": true,
+          "properties": {
+            "id": { "type": "string", "description": "Optional; if omitted the importer assigns one. Referenced from holes[].yardages[].teeSetId." },
+            "name": { "type": "string", "minLength": 1 },
+            "color": { "type": "string", "description": "CSS color (hex preferred)." },
+            "sortOrder": { "type": "integer" }
+          }
+        }
+      },
+      "holes": {
+        "type": "array",
+        "minItems": 9,
+        "maxItems": 9,
+        "description": "Exactly 9 entries; 'number' must cover 1..9.",
+        "items": {
+          "type": "object",
+          "required": ["number", "par"],
+          "additionalProperties": true,
+          "properties": {
+            "id": { "type": "string", "description": "Optional; auto-generated as hol_<12hex>." },
+            "number": { "type": "integer", "minimum": 1, "maximum": 9 },
+            "par": { "type": "integer", "minimum": 3, "maximum": 6 },
+            "handicapIndex": { "type": "integer", "minimum": 1, "maximum": 9 },
+            "notes": { "type": "string" },
+            "yardages": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["teeSetId", "yards"],
+                "additionalProperties": true,
+                "properties": {
+                  "id": { "type": "string" },
+                  "teeSetId": { "type": "string", "description": "Must match one of teeSets[].id on the parent Nine." },
+                  "yards": { "type": "integer", "minimum": 0 }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

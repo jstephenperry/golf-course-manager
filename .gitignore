@@ -1,0 +1,32 @@
+# Node / Vite
+node_modules/
+dist/
+.vite/
+
+# TS incremental build cache
+*.tsbuildinfo
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Server-bundled SPA output (built from client/dist)
+server/FairwayHq.Api/wwwroot/
+
+# OS / editor
+.DS_Store
+*.swp
+
+# Local data
+*.db
+*.db-shm
+*.db-wal
+data/
+
+# Env
+.env
+.env.*
+!.env.example

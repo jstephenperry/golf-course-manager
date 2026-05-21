@@ -1,0 +1,11 @@
+[
+  { "id": "stf_dir_calderon",    "firstName": "Andrea",  "lastName": "Calderón",  "role": "Pro",           "email": "andrea.calderon@greensideacad.example", "phone": "555-0301", "hourlyRate": 95.00, "active": true },
+  { "id": "stf_coach_levine",    "firstName": "Marcus",  "lastName": "Levine",    "role": "Pro",           "email": "marcus.levine@greensideacad.example",   "phone": "555-0302", "hourlyRate": 75.00, "active": true },
+  { "id": "stf_jr_anand",        "firstName": "Priya",   "lastName": "Anand",     "role": "Pro",           "email": "priya.anand@greensideacad.example",     "phone": "555-0303", "hourlyRate": 65.00, "active": true },
+  { "id": "stf_perf_fukuda",     "firstName": "Wes",     "lastName": "Fukuda",    "role": "Pro",           "email": "wes.fukuda@greensideacad.example",      "phone": "555-0304", "hourlyRate": 70.00, "active": true },
+  { "id": "stf_fit_roussos",     "firstName": "Sam",     "lastName": "Roussos",   "role": "Pro Shop",      "email": "sam.roussos@greensideacad.example",     "phone": "555-0305", "hourlyRate": 32.00, "active": true },
+  { "id": "stf_shop_okonkwo",    "firstName": "Hana",    "lastName": "Okonkwo",   "role": "Pro Shop",      "email": "hana.okonkwo@greensideacad.example",    "phone": "555-0306", "hourlyRate": 22.00, "active": true },
+  { "id": "stf_grnk_vega",       "firstName": "Ramón",   "lastName": "Vega",      "role": "Greenkeeper",   "email": "ramon.vega@greensideacad.example",      "phone": "555-0307", "hourlyRate": 34.00, "active": true },
+  { "id": "stf_caddie_halloran", "firstName": "Tess",    "lastName": "Halloran",  "role": "Pro Shop",      "email": "tess.halloran@greensideacad.example",   "phone": "555-0308", "hourlyRate": 20.00, "active": true },
+  { "id": "stf_asst_park",       "firstName": "Jin",     "lastName": "Park",      "role": "Assistant Pro", "email": "jin.park@greensideacad.example",        "phone": "555-0309", "hourlyRate": 38.00, "active": true }
+]

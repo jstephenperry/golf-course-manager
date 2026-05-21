@@ -1,0 +1,14 @@
+[
+  {
+    "_comment": "Required: name, date, courseId (must exist). Format ∈ Stroke Play|Best Ball|Scramble|Match Play. Status ∈ Scheduled|In Progress|Completed|Cancelled. Import courses first.",
+    "id": "trn_example_01",
+    "name": "Member-Guest Invitational",
+    "date": "2026-08-15",
+    "format": "Best Ball",
+    "courseId": "crs_example_01",
+    "entryFee": 350.0,
+    "maxPlayers": 72,
+    "registered": [],
+    "status": "Scheduled"
+  }
+]

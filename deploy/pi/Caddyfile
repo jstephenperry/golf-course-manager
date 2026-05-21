@@ -1,0 +1,64 @@
+# Production reverse proxy for a single-course Pi deployment.
+#
+# Two operating modes — pick one based on whether the Pi is exposed to
+# the public internet or strictly LAN-only.
+#
+# ============================================================
+# MODE 1 (default below): LAN-only with Caddy's internal CA.
+# ============================================================
+# Suited for a Pi sitting in the pro-shop closet that staff devices on
+# the course WiFi reach by hostname. No public DNS required. Caddy
+# issues a cert from a self-signed CA stored in /data; install the CA
+# on every staff device once (or accept the warning each time, but
+# that gets old). See setup-pi.md for the install steps.
+#
+# ============================================================
+# MODE 2: Internet-exposed with Let's Encrypt.
+# ============================================================
+# Replace `https://fairway.local:8443` below with your public domain
+# (e.g. `https://fairway.example.com`) and ensure 80/443 are
+# port-forwarded to the Pi. Caddy negotiates a real cert via ACME on
+# first startup and renews silently. Strip the `:8443` and `tls
+# internal` directives.
+#
+# In either mode, `/auth/*` is commented out by default. Uncomment +
+# point it at your IdP (Keycloak elsewhere, Authentik, or a hosted
+# Auth0 / Okta tenant — anything that speaks OIDC + JWKS) before the
+# course goes live.
+#
+# NOTE: auth is now REQUIRED in production. The app runs with
+# ASPNETCORE_ENVIRONMENT=Production and the API refuses to start unless
+# Authentication__Keycloak__Authority / __Audience are set (compose.yaml
+# enforces this via `${VAR:?...}` from /opt/fairway-hq/.env). So this
+# `/auth/*` route must be wired to a real IdP before `compose up` will
+# bring a working stack online — there is no unauthenticated prod mode.
+
+{
+	auto_https disable_redirects
+}
+
+https://fairway.local:8443 {
+	tls internal
+
+	# ----- Identity provider (uncomment + configure when ready) -----
+	# handle /auth/* {
+	#     # Option A: a Keycloak running on this same Pi
+	#     # reverse_proxy fairway-keycloak:8080
+	#     #
+	#     # Option B: a cloud-hosted IdP. Make sure the IdP knows the
+	#     # course's public URL so token `iss` claims match.
+	#     # reverse_proxy https://identity.example.com {
+	#     #     header_up Host {http.reverse_proxy.upstream.host}
+	#     # }
+	# }
+
+	# ----- API + SPA -----
+	# The .NET API serves both the JSON endpoints under /api/* and the
+	# bundled SPA at /. One container, one upstream.
+	handle {
+		reverse_proxy fairway-hq:8080 {
+			header_up X-Forwarded-Proto https
+			header_up X-Forwarded-Host {host}
+		}
+	}
+}

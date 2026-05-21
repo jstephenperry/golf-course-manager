@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fairwayhq.example/schemas/members.schema.json",
+  "title": "Members import",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["firstName", "lastName"],
+    "additionalProperties": true,
+    "properties": {
+      "id": {
+        "type": "string",
+        "description": "Optional. Auto-generated as mbr_<12hex> if omitted. If provided and already exists, the row is skipped."
+      },
+      "firstName": { "type": "string", "minLength": 1 },
+      "lastName": { "type": "string", "minLength": 1 },
+      "email": { "type": "string" },
+      "phone": { "type": "string" },
+      "tier": { "enum": ["Social", "Weekday", "Full", "Corporate"] },
+      "handicap": { "type": "number" },
+      "joinDate": { "type": "string", "description": "YYYY-MM-DD" },
+      "active": { "type": "boolean" },
+      "balance": { "type": "number", "description": "Outstanding balance. Use 0 for new members; non-zero starting balances are not auto-posted to the ledger." },
+      "status": { "enum": ["Active", "Suspended", "Inactive"] },
+      "oldestUnpaidChargeAt": { "type": ["string", "null"] },
+      "suspendedAt": { "type": ["string", "null"] },
+      "notes": { "type": ["string", "null"] }
+    }
+  }
+}

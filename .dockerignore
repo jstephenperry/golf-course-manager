@@ -1,0 +1,37 @@
+# Build outputs and caches — never want these in the build context
+node_modules/
+client/node_modules/
+**/bin/
+**/obj/
+**/dist/
+**/.vite/
+**/.cache/
+*.tsbuildinfo
+client/coverage/
+server/FairwayHq.Api/wwwroot/
+
+# Local SQLite databases
+*.db
+*.db-shm
+*.db-wal
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Git + CI metadata — not needed in the image and bloats build context
+.git/
+.github/
+.gitignore
+
+# Test fixtures and runtime artifacts
+e2e/
+client/e2e/
+seed-data/
+
+# Documentation
+README.md
+*.md
+LICENSE

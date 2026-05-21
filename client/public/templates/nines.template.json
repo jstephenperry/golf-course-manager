@@ -1,0 +1,71 @@
+[
+  {
+    "_comment": "A Nine is a playable unit of exactly 9 holes. Required: name, holes (length 9 with numbers 1..9). Tee sets are optional but recommended — each hole references them by id via 'yardages[].teeSetId'. Tee-set ids can be any string; the importer remaps them to persisted ids.",
+    "id": "nin_oak",
+    "name": "Oak",
+    "description": "Tree-lined; water on 3 & 7.",
+    "notes": "",
+    "teeSets": [
+      { "id": "tee_oak_black", "name": "Black", "color": "#111111", "sortOrder": 0 },
+      { "id": "tee_oak_blue",  "name": "Blue",  "color": "#1f4d8a", "sortOrder": 1 },
+      { "id": "tee_oak_white", "name": "White", "color": "#dddddd", "sortOrder": 2 },
+      { "id": "tee_oak_red",   "name": "Red",   "color": "#b73838", "sortOrder": 3 }
+    ],
+    "holes": [
+      { "number": 1, "par": 4, "handicapIndex": 5, "notes": "", "yardages": [
+        { "teeSetId": "tee_oak_black", "yards": 420 },
+        { "teeSetId": "tee_oak_blue",  "yards": 405 },
+        { "teeSetId": "tee_oak_white", "yards": 380 },
+        { "teeSetId": "tee_oak_red",   "yards": 340 }
+      ]},
+      { "number": 2, "par": 3, "handicapIndex": 9, "notes": "", "yardages": [
+        { "teeSetId": "tee_oak_black", "yards": 190 },
+        { "teeSetId": "tee_oak_blue",  "yards": 175 },
+        { "teeSetId": "tee_oak_white", "yards": 160 },
+        { "teeSetId": "tee_oak_red",   "yards": 130 }
+      ]},
+      { "number": 3, "par": 5, "handicapIndex": 1, "notes": "Water carry off the tee.", "yardages": [
+        { "teeSetId": "tee_oak_black", "yards": 555 },
+        { "teeSetId": "tee_oak_blue",  "yards": 535 },
+        { "teeSetId": "tee_oak_white", "yards": 510 },
+        { "teeSetId": "tee_oak_red",   "yards": 460 }
+      ]},
+      { "number": 4, "par": 4, "handicapIndex": 7, "notes": "", "yardages": [
+        { "teeSetId": "tee_oak_black", "yards": 405 },
+        { "teeSetId": "tee_oak_blue",  "yards": 390 },
+        { "teeSetId": "tee_oak_white", "yards": 370 },
+        { "teeSetId": "tee_oak_red",   "yards": 330 }
+      ]},
+      { "number": 5, "par": 4, "handicapIndex": 3, "notes": "", "yardages": [
+        { "teeSetId": "tee_oak_black", "yards": 445 },
+        { "teeSetId": "tee_oak_blue",  "yards": 425 },
+        { "teeSetId": "tee_oak_white", "yards": 405 },
+        { "teeSetId": "tee_oak_red",   "yards": 365 }
+      ]},
+      { "number": 6, "par": 3, "handicapIndex": 8, "notes": "", "yardages": [
+        { "teeSetId": "tee_oak_black", "yards": 175 },
+        { "teeSetId": "tee_oak_blue",  "yards": 160 },
+        { "teeSetId": "tee_oak_white", "yards": 145 },
+        { "teeSetId": "tee_oak_red",   "yards": 115 }
+      ]},
+      { "number": 7, "par": 5, "handicapIndex": 2, "notes": "", "yardages": [
+        { "teeSetId": "tee_oak_black", "yards": 565 },
+        { "teeSetId": "tee_oak_blue",  "yards": 545 },
+        { "teeSetId": "tee_oak_white", "yards": 515 },
+        { "teeSetId": "tee_oak_red",   "yards": 465 }
+      ]},
+      { "number": 8, "par": 4, "handicapIndex": 6, "notes": "", "yardages": [
+        { "teeSetId": "tee_oak_black", "yards": 410 },
+        { "teeSetId": "tee_oak_blue",  "yards": 395 },
+        { "teeSetId": "tee_oak_white", "yards": 375 },
+        { "teeSetId": "tee_oak_red",   "yards": 335 }
+      ]},
+      { "number": 9, "par": 4, "handicapIndex": 4, "notes": "", "yardages": [
+        { "teeSetId": "tee_oak_black", "yards": 435 },
+        { "teeSetId": "tee_oak_blue",  "yards": 415 },
+        { "teeSetId": "tee_oak_white", "yards": 395 },
+        { "teeSetId": "tee_oak_red",   "yards": 355 }
+      ]}
+    ]
+  }
+]
