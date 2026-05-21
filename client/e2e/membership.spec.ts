@@ -1,10 +1,20 @@
 import { expect, test } from "@playwright/test";
+import { seedBaseline } from "./seed";
 
 test.describe("membership", () => {
-  test("dashboard surfaces seeded pending applications", async ({ page }) => {
+  // Empty DB on boot — provision a pending application (etc.) before each
+  // test. Idempotent and re-run on retry, so the approve→activate test
+  // always has a fresh pending row to consume.
+  test.beforeEach(async () => {
+    await seedBaseline();
+  });
+
+  test("dashboard surfaces a pending application", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByText("Membership Applications")).toBeVisible();
-    await expect(page.getByText(/pending/i)).toBeVisible();
+    // "N pending" count pill — match the count specifically to avoid a
+    // strict-mode clash with the "Pending" status pill elsewhere on the page.
+    await expect(page.getByText(/\d+ pending/i)).toBeVisible();
   });
 
   test("applications tab: approve → activate creates a member", async ({
@@ -16,7 +26,7 @@ test.describe("membership", () => {
     // Switch to Applications tab
     await page.getByRole("button", { name: /Applications/ }).click();
 
-    // Pending list should have at least one seeded row.
+    // Pending list should have at least one row (provisioned in beforeEach).
     const pendingRow = page.locator("table tbody tr").first();
     await expect(pendingRow).toBeVisible();
 
@@ -26,9 +36,10 @@ test.describe("membership", () => {
 
     await pendingRow.getByRole("button", { name: /Approve/ }).click();
 
-    // Review modal
+    // Review modal. The reviewer is no longer free text — it's stamped
+    // server-side from the token (the modal just shows "Reviewing as …"), so
+    // there's nothing to fill; confirm the approval directly.
     const modal = page.locator(".modal");
-    await modal.getByLabel(/Reviewer/).fill("e2e");
     await modal.getByRole("button", { name: /^Approve$/ }).click();
 
     // The row should now be in the Approved card with an Activate button.
@@ -40,15 +51,16 @@ test.describe("membership", () => {
     page.once("dialog", (d) => d.accept());
     await approvedRow.getByRole("button", { name: /Activate/ }).click();
 
-    // The new member should appear in /api/members
-    const members = await request
-      .get("/api/members")
-      .then((r) => r.json());
-    expect(
-      (members as Array<{ firstName: string }>).some(
-        (m) => m.firstName === firstName,
-      ),
-    ).toBe(true);
+    // Activation posts asynchronously, so poll /api/members until the newly
+    // created member shows up rather than reading once and racing it.
+    await expect
+      .poll(async () => {
+        const members = (await request
+          .get("/api/members")
+          .then((r) => r.json())) as Array<{ firstName: string }>;
+        return members.some((m) => m.firstName === firstName);
+      })
+      .toBe(true);
   });
 
   test("dunning button reports a result", async ({ page }) => {

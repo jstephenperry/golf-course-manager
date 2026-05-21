@@ -10,6 +10,11 @@ import { useAuth } from "./AuthContext";
  * `<Route>` so its `<Outlet />` renders the child routes.
  *
  * Behavior:
+ *  - auth disabled (no OIDC env — local dev / tests / E2E) → render through
+ *    with no gating. There's no IdP to authenticate against; the server is
+ *    the real boundary (and in those modes runs with a synthesized owner).
+ *    Production always has Keycloak configured (`isEnabled` true; AuthSetup
+ *    throws without an authority), so this never opens a real deployment.
  *  - while the auth context is hydrating → page-loading spinner
  *  - not signed in → kicks off `login()` (redirect to Keycloak) and
  *    renders null while the browser navigates away
@@ -22,8 +27,14 @@ export function ProtectedRoute({
 }: {
   requirePermission?: string;
 }): JSX.Element | null {
-  const { isLoading, isRedirecting, isAuthenticated, hasPermission, login } =
-    useAuth();
+  const {
+    isEnabled,
+    isLoading,
+    isRedirecting,
+    isAuthenticated,
+    hasPermission,
+    login,
+  } = useAuth();
 
   // Trigger interactive sign-in once when we discover the user isn't
   // authenticated. Doing this in an effect (not during render) avoids
@@ -34,10 +45,15 @@ export function ProtectedRoute({
   // navigates to Keycloak, and an auto-login here would race past the
   // logout and silently sign the user back in.
   useEffect(() => {
-    if (!isLoading && !isAuthenticated && !isRedirecting) {
+    if (isEnabled && !isLoading && !isAuthenticated && !isRedirecting) {
       void login();
     }
-  }, [isLoading, isAuthenticated, isRedirecting, login]);
+  }, [isEnabled, isLoading, isAuthenticated, isRedirecting, login]);
+
+  // Auth disabled → no gating (see header comment).
+  if (!isEnabled) {
+    return <Outlet />;
+  }
 
   if (isLoading) {
     return (
